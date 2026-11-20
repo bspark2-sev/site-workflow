@@ -209,8 +209,16 @@ td.notecell{max-width:260px;overflow:hidden;text-overflow:ellipsis;color:var(--i
 <div id="toast"></div>
 
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-<script>window.FB_CONFIG = null; window.FB_COLLECTION = "site_workflow";</script>
+<script>window.FB_CONFIG = {
+  "apiKey": "AIzaSyBc5p-Tq9vG462SB5A9_3CSeu0SeTMLOEs",
+  "authDomain": "site-workflow-fc7fb.firebaseapp.com",
+  "projectId": "site-workflow-fc7fb",
+  "storageBucket": "site-workflow-fc7fb.firebasestorage.app",
+  "messagingSenderId": "711303301554",
+  "appId": "1:711303301554:web:1b9ada73a487dc88e87cab"
+}; window.FB_COLLECTION = "site_workflow";</script>
 <script>
 /* ================= 기본 설정 (DB에 설정이 없을 때 사용) ================= */
 const DEFAULT_CONFIG = {
@@ -396,17 +404,36 @@ function goLocal(msg){
   if(mode==='db'||mode==='fb') return;
   mode='local'; lsLoad(); banner(msg); render();
 }
+let fbUnsub=null, fbUser=null;
 function initFirebase(){
   try{ firebase.initializeApp(window.FB_CONFIG); }catch(e){}
+  if(firebase.auth){
+    firebase.auth().getRedirectResult().catch(e=>banner('로그인 실패: '+(e.code||e.message)));
+    firebase.auth().onAuthStateChanged(u=>{
+      fbUser=u;
+      if(!u){ if(fbUnsub){fbUnsub();fbUnsub=null;} sites=[]; mode='login'; banner(''); render(); return; }
+      startFirestore();
+    });
+  } else startFirestore();
+}
+async function fbLogin(){
+  const p=new firebase.auth.GoogleAuthProvider();
+  try{ await firebase.auth().signInWithPopup(p); }
+  catch(e){ if(e.code==='auth/popup-blocked'||e.code==='auth/operation-not-supported-in-this-environment'||e.code==='auth/cancelled-popup-request') await firebase.auth().signInWithRedirect(p); else banner('로그인 실패: '+(e.code||e.message)); }
+}
+function fbLogout(){ if(firebase.auth) firebase.auth().signOut(); }
+function startFirestore(){
+  if(fbUnsub) return;
+  mode='loading'; render();
   fcol=firebase.firestore().collection(window.FB_COLLECTION||'site_workflow');
   const timer=setTimeout(()=>{ if(mode==='loading') banner('Firebase에 연결하는 중입니다… 계속 이 메시지가 보이면 인터넷 연결이나 Firebase 설정을 확인하세요.'); },10000);
-  fcol.onSnapshot(snap=>{
+  fbUnsub=fcol.onSnapshot(snap=>{
     clearTimeout(timer); let c=null; const arr=[];
     snap.forEach(d=>{ if(d.id==='config') c=d.data(); else if(d.id.startsWith('site_')) arr.push(migrateSite({...JSON.parse(JSON.stringify(d.data())), id:d.id.slice(5)})); });
     sites=arr; cfg=c?mergeCfg(c):JSON.parse(JSON.stringify(DEFAULT_CONFIG));
     if(mode!=='fb'){ mode='fb'; banner(''); }
     render();
-  }, err=>{ clearTimeout(timer); banner('Firebase 연결 오류: '+(err.code||err.message)+' — Firestore 규칙을 확인하세요.'); if(mode==='loading'){ mode='local'; lsLoad(); render(); } });
+  }, err=>{ clearTimeout(timer); fbUnsub=null; banner(err.code==='permission-denied' ? `이 계정(${fbUser?fbUser.email:''})은 접근 권한이 없습니다. Firestore 규칙의 이메일을 확인하세요.` : 'Firebase 연결 오류: '+(err.code||err.message)); mode='denied'; render(); });
 }
 async function initStore(){
   if(window.FB_CONFIG && window.firebase){ initFirebase(); return; }
@@ -435,7 +462,16 @@ window.addEventListener('hashchange', render);
 function render(){
   const v=currentView();
   document.querySelectorAll('nav a').forEach(a=>a.classList.toggle('on',a.dataset.v===v));
+  $('#addSite').style.display=(mode==='login'||mode==='denied')?'none':'';
   if(mode==='loading'){ $('#view').innerHTML='<div class="empty">불러오는 중…</div>'; return; }
+  if(mode==='login'||mode==='denied'){
+    $('#view').innerHTML=`<div class="card" style="max-width:420px;margin:60px auto;text-align:center;padding:32px">
+      <div style="font-size:34px">⚡</div><h2 style="justify-content:center;font-size:18px;margin:8px 0 6px">현장 워크플로우</h2>
+      <div class="muted" style="margin-bottom:20px">${mode==='denied'?'접근 권한이 없는 계정입니다. 다른 계정으로 로그인하세요.':'본인 Google 계정으로 로그인하세요'}</div>
+      ${mode==='denied'?'<button class="btn" id="loBtn" style="margin-right:6px">로그아웃</button>':''}<button class="btn pri big" id="liBtn">Google로 로그인</button></div>`;
+    const li=$('#liBtn'); if(li) li.onclick=fbLogin; const lo=$('#loBtn'); if(lo) lo.onclick=fbLogout;
+    return;
+  }
   if(document.activeElement && $('#view').contains(document.activeElement) && v==='settings') return; // 설정 입력 중 리렌더 방지
   if(v==='dashboard') renderDashboard();
   else if(v==='sites') renderSites();
@@ -920,7 +956,7 @@ function renderSettings(){
   <div style="display:flex;gap:8px;margin-bottom:18px"><button class="btn pri" id="saveCfg">설정 저장</button><button class="btn" id="resetCfg">기본값으로</button><span class="save-state" id="cfgState"></span></div>
   <div class="card">
     <h2>백업</h2>
-    <div class="muted" style="margin-bottom:8px">전체 데이터를 JSON으로 복사해두거나, 붙여넣어 복원할 수 있습니다. 저장 위치: ${mode==='fb'?'Firebase (어느 기기에서든 동일)':mode==='db'?'claude.ai 저장소 (어느 기기에서든 동일)':'이 브라우저 (임시)'}</div>
+    <div class="muted" style="margin-bottom:8px">전체 데이터를 JSON으로 복사해두거나, 붙여넣어 복원할 수 있습니다. 저장 위치: ${mode==='fb'?`Firebase (어느 기기에서든 동일)${fbUser?' · '+esc(fbUser.email)+' <button class="btn sm" onclick="fbLogout()">로그아웃</button>':''}`:mode==='db'?'claude.ai 저장소 (어느 기기에서든 동일)':'이 브라우저 (임시)'}</div>
     <textarea class="json" id="jsonBox" placeholder="복원할 JSON을 여기 붙여넣기"></textarea>
     <div style="display:flex;gap:8px;margin-top:8px"><button class="btn" id="copyJson">JSON 복사</button><button class="btn" id="importJson">붙여넣은 JSON으로 복원</button></div>
   </div>`;
