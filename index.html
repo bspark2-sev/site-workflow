@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#14213d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="현장 워크플로우">
+<title>현장 워크플로우 관리</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+:root{--bg:#f4f6fa;--card:#fff;--ink:#1d2433;--ink2:#5a6478;--ink3:#8f98aa;--line:#e3e7ef;--acc:#1f4fd8;--accl:#e8eefc;--grn:#2e7d32;--grnl:#e5f3e6;--red:#c62828;--redl:#fdecec;--org:#c26a00;--orgl:#fff3e0;--gray:#eceff3}
+*{box-sizing:border-box}body{margin:0;font-family:'Noto Sans KR',system-ui,sans-serif;background:var(--bg);color:var(--ink);font-size:14px}
+button{font-family:inherit;cursor:pointer}input,select,textarea{font-family:inherit;font-size:13px}
+header{background:#14213d;color:#fff;display:flex;align-items:center;gap:18px;padding:0 20px;height:54px;position:sticky;top:0;z-index:20}
+header h1{font-size:16px;margin:0;font-weight:700;white-space:nowrap}
+nav{display:flex;gap:4px;flex:1}nav a{color:#c9d3ea;text-decoration:none;padding:8px 12px;border-radius:6px;font-size:14px}
+nav a.on{background:rgba(255,255,255,.14);color:#fff;font-weight:500}
+.btn{border:1px solid var(--line);background:#fff;color:var(--ink);padding:7px 12px;border-radius:6px;font-size:13px}
+.btn:hover{background:#f7f8fb}.btn.pri{background:var(--acc);border-color:var(--acc);color:#fff}.btn.pri:hover{filter:brightness(1.08)}
+.btn.danger{color:var(--red);border-color:#f2c4c4}.btn.sm{padding:4px 8px;font-size:12px}
+main{padding:20px;max-width:1500px;margin:0 auto}
+#banner{display:none;background:var(--orgl);color:var(--org);padding:8px 20px;font-size:13px;border-bottom:1px solid #f3d9b1}
+.kpis{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:12px;margin-bottom:18px}
+.regs{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
+.reg{border:1px solid var(--line);border-radius:8px;padding:10px 12px;cursor:pointer;background:#fafbfd}
+.reg:hover{border-color:var(--acc);background:var(--accl)}
+.reg .rn{font-size:13px;font-weight:700}.reg .rv{font-size:22px;font-weight:700;margin:2px 0}.reg .rv small{font-size:12px;color:var(--ink2);font-weight:500;margin-left:2px}
+.reg .rs{font-size:12px;display:flex;gap:8px;flex-wrap:wrap;color:var(--ink2)}
+@media(max-width:1100px){.kpis{grid-template-columns:repeat(auto-fit,minmax(130px,1fr))}}
+.msel{position:relative}
+.mselbtn{padding:7px 10px;border:1px solid var(--line);border-radius:6px;background:#fff;font-size:13px;min-width:110px;text-align:left}
+.mselbtn.on{border-color:var(--acc);color:var(--acc);font-weight:500}
+.mselpop{display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:30;background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.1);padding:6px;min-width:200px;max-height:320px;overflow:auto}
+.msel.open .mselpop{display:block}
+.mo{display:flex;gap:8px;align-items:center;padding:6px 8px;border-radius:5px;font-size:13px;cursor:pointer}
+.mo:hover{background:#f3f5fa}.mo.all{border-bottom:1px solid var(--line);margin-bottom:4px;border-radius:0}
+.mo input{accent-color:var(--acc)}.mo .muted{margin-left:auto}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.kpi .l{font-size:12px;color:var(--ink2)}.kpi .v{font-size:24px;font-weight:700;margin-top:4px}.kpi .v small{font-size:13px;font-weight:500;color:var(--ink2);margin-left:2px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:18px}
+.card h2{font-size:15px;margin:0 0 12px;display:flex;align-items:center;gap:8px}
+.muted{color:var(--ink3);font-size:12px}
+/* pipeline */
+.pipe{display:flex;gap:10px;overflow-x:auto;padding-bottom:6px}
+.col{min-width:170px;max-width:170px;background:#f7f8fb;border:1px solid var(--line);border-radius:8px;display:flex;flex-direction:column}
+.col.env{background:#f3faf3;border-color:#cfe7d0}
+.col h3{font-size:12px;margin:0;padding:8px 10px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:6px;font-weight:700}
+.col h3 .n{background:#fff;border:1px solid var(--line);border-radius:10px;padding:0 7px;font-weight:500}
+.col .items{padding:8px;display:flex;flex-direction:column;gap:6px;min-height:40px}
+.chip{background:#fff;border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-size:12px;cursor:pointer;line-height:1.35}
+.chip:hover{border-color:var(--acc)}.chip .t{font-weight:500}.chip .s{color:var(--ink3);font-size:11px;display:flex;justify-content:space-between}
+/* table */
+.toolbar{display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+.toolbar input,.toolbar select{padding:7px 9px;border:1px solid var(--line);border-radius:6px;background:#fff}
+table{width:100%;border-collapse:collapse;background:#fff}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;font-size:13px;white-space:nowrap}
+th{background:#f7f8fb;font-weight:500;color:var(--ink2);font-size:12px;position:sticky;top:0}
+tbody tr{cursor:pointer}tbody tr:hover{background:#f9fbff}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+td.num,th.num{text-align:right}
+.bar{width:90px;height:7px;background:var(--gray);border-radius:4px;overflow:hidden;display:inline-block;vertical-align:middle;margin-right:6px}
+.bar i{display:block;height:100%;background:var(--acc)}
+.tag{display:inline-block;padding:1px 8px;border-radius:10px;font-size:11px;font-weight:500;background:var(--gray);color:var(--ink2)}
+.tag.env{background:var(--grnl);color:var(--grn)}.tag.self{background:var(--accl);color:var(--acc)}
+.tag.rm{background:var(--orgl);color:var(--org)}.tag.진행{background:var(--accl);color:var(--acc)}.tag.개통{background:var(--grnl);color:var(--grn)}.tag.철거{background:var(--orgl);color:var(--org)}.tag.보류{background:var(--gray);color:var(--ink2)}
+.dday{font-weight:700}.dday.hot{color:var(--red)}.dday.over{color:#fff;background:var(--red);padding:1px 6px;border-radius:4px}
+tr.done td{color:var(--ink3)}
+.empty{text-align:center;padding:40px;color:var(--ink3)}
+/* drawer */
+#drawer{position:fixed;inset:0;background:rgba(15,20,35,.45);display:none;z-index:50}
+#drawer.open{display:block}
+.panel{position:absolute;right:0;top:0;bottom:0;width:min(1100px,100%);background:var(--bg);display:flex;flex-direction:column}
+.phead{background:#fff;border-bottom:1px solid var(--line);padding:12px 18px;display:flex;align-items:center;gap:10px}
+.phead h2{margin:0;font-size:17px;flex:1}
+.pbody{overflow-y:auto;padding:18px;flex:1}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px 14px}
+.f label{display:block;font-size:12px;color:var(--ink2);margin-bottom:3px}
+.f input,.f select,.f textarea{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:6px;background:#fffdf3}
+.f input[readonly]{background:#f3f4f7;color:var(--ink2)}
+.two{display:grid;grid-template-columns:330px 1fr;gap:18px}
+@media(max-width:900px){.two{grid-template-columns:1fr}}
+.steps{list-style:none;margin:0;padding:0}
+.steps li{display:flex;gap:10px;align-items:flex-start;padding:7px 8px;border-radius:6px;cursor:pointer;position:relative}
+.steps li:hover{background:#f2f5fb}
+.steps .dot{width:22px;height:22px;border-radius:50%;border:2px solid var(--line);background:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--ink3);flex:none}
+.steps li.done .dot{background:var(--acc);border-color:var(--acc);color:#fff}
+.steps li.cur{background:var(--accl)}.steps li.cur .dot{border-color:var(--acc);color:var(--acc);font-weight:700}
+.steps li.envs .nm::after{content:'환경부';margin-left:6px;font-size:10px;color:var(--grn);background:var(--grnl);padding:0 5px;border-radius:6px}
+.steps .nm{font-size:13px;font-weight:500}.steps .ck{font-size:11px;color:var(--ink3)}.steps .dt{font-size:11px;color:var(--acc)}
+.sub{font-size:13px;font-weight:700;margin:16px 0 8px;color:var(--ink2)}
+.mini{width:100%;border-collapse:collapse}
+.mini th,.mini td{padding:4px 5px;border-bottom:1px solid var(--line);font-size:12px}
+.mini input,.mini select{width:100%;padding:5px 6px;border:1px solid var(--line);border-radius:5px;background:#fffdf3}
+.mini td.num{text-align:right;white-space:nowrap}
+.sum{background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px}
+.sum .row{display:flex;justify-content:space-between;padding:4px 0;font-size:13px}
+.sum .row.sub2{color:var(--ink2);font-size:12px;padding-left:10px}
+.sum .row.tot{border-top:1px solid var(--line);margin-top:6px;padding-top:8px;font-weight:700;font-size:15px}
+.sum .row.grn{color:var(--grn)}
+.save-state{font-size:12px;color:var(--ink3)}
+.confirm{display:none;gap:6px;align-items:center}.confirm.show{display:flex}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#14213d;color:#fff;padding:9px 16px;border-radius:8px;font-size:13px;opacity:0;transition:.2s;pointer-events:none;z-index:60}
+#toast.show{opacity:1}
+textarea.json{width:100%;height:140px;font-family:monospace;font-size:11px;border:1px solid var(--line);border-radius:6px;padding:8px}
+
+.tabs{display:flex;gap:2px;background:#fff;border-bottom:1px solid var(--line);padding:0 18px}
+.tab{border:0;background:none;padding:10px 16px;font-size:14px;color:var(--ink2);border-bottom:2px solid transparent}
+.tab.on{color:var(--acc);border-bottom-color:var(--acc);font-weight:700}
+.flowwrap{max-width:760px;margin:0 auto}
+.curcard{background:#fff;border:2px solid var(--acc);border-radius:12px;padding:20px}
+.donecard{border-color:var(--grn)}
+.stepno{font-size:12px;color:var(--acc);font-weight:700}.donecard .stepno{color:var(--grn)}
+.curname{font-size:22px;font-weight:700;margin-top:4px}
+.curinfo{margin-top:10px;font-size:13px;color:var(--ink2);display:flex;flex-direction:column;gap:3px}
+.checks{margin-top:12px;display:flex;flex-direction:column;gap:6px}
+.chk{display:flex;gap:8px;align-items:center;padding:9px 12px;border:1px solid var(--line);border-radius:8px;cursor:pointer;font-size:14px;background:#fafbfd}
+.chk input{width:18px;height:18px;accent-color:var(--grn)}.chk.on{background:var(--grnl);border-color:#bfe0c1}.chk.on span{color:var(--grn);text-decoration:line-through}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.slist{display:flex;flex-direction:column;gap:10px}
+.srow{background:#fff;border:1px solid var(--line);border-radius:10px;padding:16px 18px;display:grid;grid-template-columns:minmax(230px,.8fr) 3fr 130px;gap:20px;align-items:center;cursor:pointer;min-height:110px}
+.srow:hover{border-color:var(--acc);box-shadow:0 2px 10px rgba(31,79,216,.07)}
+.srow.done{opacity:.6}
+.sname{font-size:16px;font-weight:700;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.smeta{font-size:12px;color:var(--ink3);margin-top:3px}
+.sinfo{font-size:12px;color:var(--ink2);margin-top:8px;line-height:1.7}.sinfo .sep{color:var(--line);margin:0 6px}
+.scur{font-size:15px;margin-bottom:10px}
+.mf{display:flex;gap:3px}
+.mfs{flex:1;min-width:0;text-align:center}
+.mfs i{display:block;height:12px;background:var(--gray);border-radius:4px}
+.mfs.e i{background:#dcebdc}
+.mfs.d i{background:var(--acc)}.mfs.c i{background:#fff;box-shadow:inset 0 0 0 3px var(--acc)}
+.mfs span{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;font-size:12.5px;line-height:1.3;color:var(--ink3);margin-top:6px;min-height:3.9em;overflow-wrap:anywhere;overflow:hidden;padding:0 1px;word-break:keep-all}
+.mfs.d span{color:var(--ink2)}.mfs.c span{color:var(--acc);font-weight:700}
+.snotes{margin-top:10px;background:#f7f8fb;border-radius:8px;padding:9px 12px;font-size:14px}
+.sn{display:flex;gap:10px;line-height:1.75;min-width:0}.snk{color:var(--acc);font-weight:700;white-space:nowrap;flex:none;min-width:150px}
+.snv{color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.snotes.open .snv{white-space:pre-wrap}
+.snote{font-size:12px;color:var(--ink2);margin-top:8px;background:#f7f8fb;border-radius:6px;padding:5px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sr{text-align:right}.sval{font-size:20px;font-weight:700;color:var(--acc);margin:2px 0}.sval small{font-size:12px;margin-left:2px;color:var(--ink2);font-weight:500}
+@media(max-width:1000px){.srow{grid-template-columns:1fr}.sr{text-align:left}}
+.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+@media(max-width:900px){.pgrid{grid-template-columns:1fr}}
+.psep.inst{color:var(--acc);background:var(--accl)}
+.pipe2{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.prow{display:grid;grid-template-columns:170px 32px 1fr;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--line);min-height:44px}
+.prow:last-child{border-bottom:0}
+.prow.env{background:#f6fbf6}
+.pname{font-size:13px;font-weight:700;display:flex;gap:6px;align-items:center}
+.pn{font-size:15px;font-weight:700;color:var(--acc);text-align:center}
+.prow.empty0{min-height:30px;padding:4px 12px}.prow.empty0 .pname{font-weight:400;color:var(--ink3);font-size:12px}.prow.empty0 .pn{color:var(--line);font-size:12px}
+.pitems{display:flex;flex-wrap:wrap;gap:6px}
+.psep{padding:6px 12px;font-size:12px;font-weight:700;color:var(--org);background:var(--orgl);border-bottom:1px solid var(--line)}
+.prow.rmrow{background:#fffaf3}
+.mfs.br i{background:repeating-linear-gradient(45deg,#f3e2c8,#f3e2c8 4px,#fff 4px,#fff 8px)}.mfs.br span{color:var(--org)}
+.brsel{display:flex;gap:8px;margin-top:12px}.brsel button{flex:1;padding:12px;border:2px solid var(--line);border-radius:8px;background:#fff;font-size:15px;font-weight:700;color:var(--ink2)}
+.brsel button.on{border-color:var(--org);background:var(--orgl);color:var(--org)}
+.keepf{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.pchip{background:#fff;border:1px solid var(--line);border-radius:16px;padding:4px 12px;font-size:13px;cursor:pointer}
+.pchip:hover{border-color:var(--acc);background:var(--accl)}.pchip.hold{opacity:.6}
+.curbtns{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
+.btn.big{padding:11px 18px;font-size:15px;font-weight:700}
+.tl{list-style:none;margin:0;padding:0}
+.tl li{display:flex;gap:10px;padding:6px 0;position:relative}
+.tl li:not(:last-child)::before{content:'';position:absolute;left:10px;top:30px;bottom:-6px;width:2px;background:var(--line)}
+.tl li.done:not(:last-child)::before{background:var(--acc)}
+.tl .dot{width:22px;height:22px;border-radius:50%;border:2px solid var(--line);background:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--ink3);flex:none;z-index:1}
+.tl li.done .dot{background:var(--acc);border-color:var(--acc);color:#fff}
+.tl li.cur .dot{border-color:var(--acc);color:var(--acc);font-weight:700;box-shadow:0 0 0 4px var(--accl)}
+.tl li.cur .nm{color:var(--acc);font-weight:700}
+.tlc{flex:1;min-width:0}.tlh{display:flex;gap:8px;align-items:center;flex-wrap:wrap;min-height:22px}
+.tl .nm{font-size:13px}.tl li:not(.done):not(.cur) .nm{color:var(--ink3)}
+.tl .dt{font-size:11px;color:var(--ink3)}
+.envtag{font-size:10px;color:var(--grn);background:var(--grnl);padding:0 5px;border-radius:6px}
+.lnk{border:0;background:none;color:var(--acc);font-size:11px;padding:0}
+.note{font-size:12px;color:var(--ink2);background:#f7f8fb;border-radius:6px;padding:6px 8px;margin-top:4px;white-space:pre-wrap}
+.editrow{margin-top:6px}.editrow input{padding:3px 6px;border:1px solid var(--line);border-radius:5px;background:#fffdf3;margin-left:4px}
+.noteedit{width:100%;margin-top:4px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:#fffdf3}
+td.notecell{max-width:260px;overflow:hidden;text-overflow:ellipsis;color:var(--ink2)}
+
+@media(max-width:700px){
+  header{flex-wrap:wrap;height:auto;padding:8px 12px;gap:6px 10px}
+  header h1{font-size:15px}
+  nav{order:3;width:100%;gap:2px}nav a{white-space:nowrap;padding:6px 10px;font-size:13px}
+  #addSite{margin-left:auto;padding:6px 10px;white-space:nowrap}
+  main{padding:12px}
+  .mfs span{display:none}.mf{gap:2px}.mfs i{height:10px}
+  .srow{padding:14px;gap:12px}
+  .prow{grid-template-columns:120px 26px 1fr;padding:6px 10px}
+  .kpis{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.kpi{padding:10px}.kpi .v{font-size:20px}
+  .sn{flex-direction:column;gap:0}.snk{min-width:0}
+  .pbody{padding:12px}.phead{padding:10px 12px}.tabs{padding:0 8px}
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>⚡ 현장 워크플로우</h1>
+  <nav>
+    <a href="#dashboard" data-v="dashboard">대시보드</a>
+    <a href="#sites" data-v="sites">현장 목록</a>
+    <a href="#settings" data-v="settings">설정</a>
+  </nav>
+  <button class="btn pri" id="addSite">+ 현장 추가</button>
+</header>
+<div id="banner"></div>
+<main id="view"><div class="empty">불러오는 중…</div></main>
+<div id="drawer"><div class="panel" id="panel"></div></div>
+<div id="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script>window.FB_CONFIG = null; window.FB_COLLECTION = "site_workflow";</script>
+<script>
+/* ================= 기본 설정 (DB에 설정이 없을 때 사용) ================= */
+const DEFAULT_CONFIG = {
+  version: 2,
+  baseSteps: [
+    {id:'b1',name:'제안서 발송',task:'제안서 발송 완료',check:'',note:'제안 내용'},
+    {id:'b2',name:'입대의 완료',task:'',check:'확정된 제안'},
+    {id:'b3',name:'운영계약서 초안 발송',task:'BDM 발송',check:'운영계약서 초안 발송'},
+    {id:'b12',name:'운영계약서 검토 및 날인',task:'',check:'운영계약서 검토 및 날인'},
+    {id:'b4',name:'시공사 견적',task:'견적 검토',check:'시공사 실사 및 견적 확인'},
+    {id:'b5',name:'충전기 OPEN 기안',task:'기안 작성',check:'기안 상신'},
+    {id:'b13',name:'기안 결재완료',task:'',check:'기안 결재완료 확인'},
+    {id:'b6',name:'행위신고 및 행위허가',task:'',check:'행위신고 및 행위허가 일정 확인'},
+    {id:'b7',name:'공사일정 확인',task:'',check:'공사일정 확인'},
+    {id:'b8',name:'충전기 출하',task:'충전기 모델 및 일정 확인',check:'충전기 모델 및 일정 확인'},
+    {id:'b14',name:'착공',task:'',check:'착공 확인'},
+    {id:'b15',name:'완공',task:'',check:'완공 확인'},
+    {id:'b9',name:'전기안전점검',task:'전기안전점검 신청',check:'전기안전점검 일정 확인'},
+    {id:'b10',name:'지자체 사용승인',task:'',check:'지자체 사용승인 일정 확인'},
+    {id:'b11',name:'개통',task:'프로모션 요금 적용 시점 안내',check:'프로모션 요금 적용 시점 안내'}
+  ],
+  envSteps: [
+    {id:'e1',name:'환경부 접수',task:'',check:''},
+    {id:'e2',name:'보완',task:'',check:''},
+    {id:'e3',name:'보완완료',task:'',check:''},
+    {id:'e4',name:'승인',task:'',check:''},
+    {id:'e6',name:'준공',task:'',check:''}
+  ],
+  envOrder: ['b1','b2','b3','b12','b4','e1','e2','e3','e4','b5','b13','b6','b7','b8','b14','b15','b9','b10','e6','b11'],
+  removeSteps: [
+    {id:'r1',name:'계약 만료 통보 공문 수령',task:'',check:'공문 수령'},
+    {id:'r2',name:'계약해지방어 방문 요청',task:'',check:'방문 요청'},
+    {id:'r3',name:'협의 내용',task:'',check:'',note:'협의 내용'},
+    {id:'r4',name:'협의 결과',task:'',check:'',note:'협의 결과',branch:true},
+    {id:'r5',name:'공사견적 검토',task:'',check:'공사견적 검토',br:'철거'},
+    {id:'r6',name:'철거 범위 협의',task:'',check:'철거 범위 협의',br:'철거'},
+    {id:'r7',name:'아파트측 행위허가 진행',task:'',check:'행위허가 진행',br:'철거'},
+    {id:'r8',name:'시공일정 수립',task:'시공일정 수립',check:'철거기안 작성',br:'철거'},
+    {id:'r9',name:'착공',task:'',check:'착공 확인',br:'철거'},
+    {id:'r10',name:'완공',task:'',check:'완공 확인',br:'철거'},
+    {id:'r11',name:'유지 조건 확인',task:'',check:'유지 기수, 유지 조건, 유지 기간, 자동계약연장(1년) 여부',br:'유지',keep:true}
+  ],
+  prices: [
+    {id:'p1',type:'충전기',model:'휴맥스EV 7kW 일반',code:'H95-0030',name:'HEV-S1007A/HEU7',price:583985},
+    {id:'p2',type:'충전기',model:'휴맥스 7kW 스마트',code:'H95-0156',name:'HS31007D/AJ.C0T.M1.320/HE',price:620000},
+    {id:'p3',type:'충전기',model:'제니스코리아 7kW 스마트',code:'H96-0152',name:'GK-SMC03-7L',price:630000},
+    {id:'p4',type:'충전기',model:'그리드위즈 7kW 스마트',code:'H96-0153',name:'GESEBA07BT1S04',price:640000},
+    {id:'p5',type:'충전기',model:'아프로텍 3.5kW 일반',code:'H96-0146',name:'AT-EV310H',price:380000},
+    {id:'p6',type:'스탠드폴',model:'공용 v1',code:'H96-0130',name:'MD/ CPO_CM_SP',price:83788},
+    {id:'p7',type:'스탠드폴',model:'공용 v2(3개사 공용)',code:'H96-0154',name:'MD/CPO_CM_SP_V2',price:87553},
+    {id:'p8',type:'헬멧',model:'공용 v1',code:'H96-0131',name:'MD/ CPO_CM_HM',price:19346},
+    {id:'p9',type:'헬멧',model:'공용 v2(3개사 공용)',code:'H96-0155',name:'MD/CPO_CM_HM_V2',price:23806},
+    {id:'p10',type:'헬멧',model:'공용 벽부형 v1',code:'H96-0144',name:'MD/ CPO_CM_HM WALL TYPE',price:26680},
+    {id:'p11',type:'헬멧형 스탠드폴',model:'공용 v1',code:'-',name:'스탠드폴 v1 + 헬멧 v1',combo:['p6','p8']},
+    {id:'p12',type:'헬멧형 스탠드폴',model:'공용 v2(3개사 공용)',code:'-',name:'스탠드폴 v2 + 헬멧 v2',combo:['p7','p9']}
+  ],
+  calc: {
+    inspBase:94000, inspKw:391,
+    safeBase:44000, safeKw:1059,
+    kepcoUgBase:588000, kepcoUgKw:141000,
+    kepcoOhBase:306000, kepcoOhKw:121000,
+    supv:[[130,800000],[160,900000],[200,1000000],[300,1100000],[400,1200000],[null,1300000]],
+    subRate:0.5, subCap1:2200000, subCap2:2000000, subCap6:1800000
+  }
+};
+const STATUSES=['진행','보류','개통','철거'];
+const TYPES=['자체투자','환경부','철거'];
+const isDone=s=>s.status==='개통'||s.status==='철거';
+const typeCls=t=>t==='환경부'?'env':(t==='철거'?'rm':'self');
+function doneLabel(s){ if(s.status==='철거') return '철거 완료'; return s.type==='철거' ? '유지 확정' : '개통 완료'; }
+const SUPPLY=['신규수전(지중)','신규수전(가공)','모자분리'];
+
+/* ================= 상태 ================= */
+let cfg = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+let sites = [];           // [{id, ...}]
+let db = null, mode = 'loading'; // 'db' | 'local' | 'loading'
+let editing = null;       // 편집 중인 현장 사본
+let dirty = false;
+
+/* ================= 유틸 ================= */
+const $ = s => document.querySelector(s);
+const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const won = v => (v==null||v===''||isNaN(v)) ? '-' : Math.round(v).toLocaleString('ko-KR');
+const manwon = v => { if(!v) return '0원'; const a=Math.abs(v); if(a>=1e8) return (v/1e8).toFixed(2).replace(/\.?0+$/,'')+'억'; return Math.round(v/1e4).toLocaleString()+'만'; };
+const num = v => { const n=parseFloat(String(v??'').replace(/,/g,'')); return isNaN(n)?0:n; };
+const today = () => { const d=new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,10); };
+const ddays = dateStr => { if(!dateStr) return null; const t=new Date(today()+'T00:00:00'), d=new Date(dateStr+'T00:00:00'); return Math.round((d-t)/86400000); };
+const uid = () => Math.random().toString(36).slice(2,10);
+function toast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove('show'),1800); }
+function banner(msg){ const b=$('#banner'); if(!msg){b.style.display='none';return;} b.textContent=msg; b.style.display='block'; }
+
+/* ================= 워크플로우 ================= */
+function stepById(id){ return cfg.baseSteps.find(s=>s.id===id) || cfg.envSteps.find(s=>s.id===id) || (cfg.removeSteps||[]).find(s=>s.id===id); }
+function flowFor(type,site){
+  if(type==='철거'){
+    const rs=cfg.removeSteps||[], br=site&&site.branch;
+    return rs.filter(s=>!s.br || (br && s.br===br));
+  }
+  const ids = type==='환경부' ? cfg.envOrder : cfg.baseSteps.map(s=>s.id);
+  return ids.map(stepById).filter(Boolean);
+}
+function progress(site){
+  if(isDone(site)) return 1;
+  const f=flowFor(site.type,site); const i=f.findIndex(s=>s.id===site.stepId);
+  const len = (site.type==='철거' && !site.branch) ? (cfg.removeSteps||[]).filter(s=>s.br!=='유지').length : f.length;
+  return i<0 ? 0 : i/len;
+}
+function checkItems(st){ const out=[]; [st.task,st.check].forEach(t=>String(t||'').split(/\n|,|·/).map(x=>x.trim()).filter(Boolean).forEach(x=>{ if(!out.includes(x)) out.push(x); })); return out; }
+function stepName(id){ const s=stepById(id); return s? s.name : ''; }
+
+/* ================= 투자비 계산 (EVCS-Simul 공사비 탭 로직, 부가세 별도) ================= */
+function priceOf(id){
+  const p=cfg.prices.find(x=>x.id===id); if(!p) return 0;
+  if(p.combo) return p.combo.reduce((s,c)=>s+priceOf(c),0);
+  return num(p.price);
+}
+function chargerKw(id){
+  const p=cfg.prices.find(x=>x.id===id); if(!p) return 7;
+  if(p.kw) return num(p.kw); const m=String(p.model).match(/(\d+(?:\.\d+)?)\s*kW/i); return m?parseFloat(m[1]):7;
+}
+function pointKw(site,p){ return (p.qty!==undefined && p.qty!=='') ? num(p.qty)*chargerKw((site.invest||{}).chargerModel) : Math.max(num(p.kw),0); }
+function calc(site){
+  const c=cfg.calc, inv=site.invest||{};
+  const qty=num(inv.chargerQty);
+  const charger = qty*priceOf(inv.chargerModel);
+  const stand = num(inv.poleQty)*priceOf(inv.poleModel) + num(inv.helmetQty)*priceOf(inv.helmetModel) + num(inv.hpoleQty)*priceOf(inv.hpoleModel);
+  const canopy = num(inv.canopy);
+  const elec = (site.elec||[]).reduce((s,e)=>s+num(e.qty)*num(e.price),0);
+  let insp=0,safe=0,kepco=0,kwTot=0;
+  const pts=(site.points||[]).map(p=>{
+    const kw=pointKw(site,p); kwTot+=kw;
+    const i = kw>0 && p.insp!==false ? c.inspBase+kw*c.inspKw : 0;
+    const s = kw>0 && p.safe!==false ? c.safeBase+kw*c.safeKw : 0;
+    let k=0;
+    if(kw>0 && p.supply!=='모자분리'){
+      k = p.supply==='신규수전(가공)' ? c.kepcoOhBase+Math.max(kw-5,0)*c.kepcoOhKw : c.kepcoUgBase+Math.max(kw-5,0)*c.kepcoUgKw;
+    }
+    insp+=i; safe+=s; kepco+=k; return {kw,insp:i,safe:s,kepco:k};
+  });
+  let supv=0;
+  if(inv.supv!==false && kwTot>0){ for(const [lim,amt] of c.supv){ if(lim==null || kwTot<=lim){ supv=amt; break; } } }
+  const total = charger+stand+canopy+elec+insp+safe+kepco+supv;
+  let subsidy=0, subBase=0, cap=0;
+  if(site.type==='환경부'){
+    subBase = charger+stand+canopy+elec+kepco;
+    cap = qty<=0 ? 0 : c.subCap1 + (Math.min(qty,5)-1)*c.subCap2 + Math.max(qty-5,0)*c.subCap6;
+    subsidy = Math.min(Math.round(subBase*c.subRate/1000)*1000, cap);
+  }
+  const net = total-subsidy;
+  return {qty,charger,stand,canopy,elec,insp,safe,kepco,supv,kwTot,total,subBase,cap,subsidy,net,perUnit: qty>0? net/qty : null, pts};
+}
+
+/* ================= 저장소 ================= */
+const LS_KEY='site-workflow-v1';
+function lsLoad(){ try{ const d=JSON.parse(localStorage.getItem(LS_KEY)||'null'); if(d){ sites=(d.sites||[]).map(migrateSite); if(d.cfg) cfg=mergeCfg(d.cfg);} }catch(e){} }
+function lsSave(){ try{ localStorage.setItem(LS_KEY, JSON.stringify({sites,cfg})); }catch(e){ toast('브라우저 저장 실패'); } }
+function migrateSite(s){ if(s.status==='완료') s.status='개통'; if(s.status==='실주') s.status='보류'; if(s.stepId==='e5') s.stepId='b14'; if(s.stepDone&&s.stepDone.e5){ s.stepDone={...s.stepDone,b14:s.stepDone.e5}; delete s.stepDone.e5; } if(s.stepNotes&&s.stepNotes.e5){ s.stepNotes={...s.stepNotes,b14:s.stepNotes.e5}; delete s.stepNotes.e5; } return s; }
+function mergeCfg(c){
+  if(c&&c.calc&&Array.isArray(c.calc.supv)&&c.calc.supv.length&&!Array.isArray(c.calc.supv[0])){ c=JSON.parse(JSON.stringify(c)); c.calc.supv=c.calc.supv.map(o=>[o.lim??null,o.amt]); }
+  if(c && (c.version||1)<DEFAULT_CONFIG.version){ c=Object.assign({},c,{version:DEFAULT_CONFIG.version,baseSteps:DEFAULT_CONFIG.baseSteps,envSteps:DEFAULT_CONFIG.envSteps,envOrder:DEFAULT_CONFIG.envOrder}); }
+  return Object.assign(JSON.parse(JSON.stringify(DEFAULT_CONFIG)), c||{}, {calc:Object.assign({},DEFAULT_CONFIG.calc,(c||{}).calc||{})}); }
+
+async function saveSite(site){
+  const body=JSON.parse(JSON.stringify(site)); delete body.id; body.updatedAt=new Date().toISOString();
+  if(mode==='fb'){ await fcol.doc('site_'+site.id).set(body); }
+  else if(mode==='db'){ await db.collection('sites').doc(site.id).set(body); }
+  else { const i=sites.findIndex(s=>s.id===site.id); const s={...body,id:site.id}; if(i<0) sites.push(s); else sites[i]=s; lsSave(); render(); }
+}
+async function deleteSite(id){
+  if(mode==='fb'){ await fcol.doc('site_'+id).delete(); }
+  else if(mode==='db'){ await db.collection('sites').doc(id).delete(); }
+  else { sites=sites.filter(s=>s.id!==id); lsSave(); render(); }
+}
+async function saveCfg(){
+  if(mode==='fb'){ const c=JSON.parse(JSON.stringify(cfg)); c.calc.supv=c.calc.supv.map(([lim,amt])=>({lim,amt})); await fcol.doc('config').set(c); }
+  else if(mode==='db'){ await db.doc('config/main').set(JSON.parse(JSON.stringify(cfg))); }
+  else { lsSave(); }
+  render();
+}
+
+let fcol=null;
+function goLocal(msg){
+  if(mode==='db'||mode==='fb') return;
+  mode='local'; lsLoad(); banner(msg); render();
+}
+function initFirebase(){
+  try{ firebase.initializeApp(window.FB_CONFIG); }catch(e){}
+  fcol=firebase.firestore().collection(window.FB_COLLECTION||'site_workflow');
+  const timer=setTimeout(()=>{ if(mode==='loading') banner('Firebase에 연결하는 중입니다… 계속 이 메시지가 보이면 인터넷 연결이나 Firebase 설정을 확인하세요.'); },10000);
+  fcol.onSnapshot(snap=>{
+    clearTimeout(timer); let c=null; const arr=[];
+    snap.forEach(d=>{ if(d.id==='config') c=d.data(); else if(d.id.startsWith('site_')) arr.push(migrateSite({...JSON.parse(JSON.stringify(d.data())), id:d.id.slice(5)})); });
+    sites=arr; cfg=c?mergeCfg(c):JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+    if(mode!=='fb'){ mode='fb'; banner(''); }
+    render();
+  }, err=>{ clearTimeout(timer); banner('Firebase 연결 오류: '+(err.code||err.message)+' — Firestore 규칙을 확인하세요.'); if(mode==='loading'){ mode='local'; lsLoad(); render(); } });
+}
+async function initStore(){
+  if(window.FB_CONFIG && window.firebase){ initFirebase(); return; }
+  const timer=setTimeout(()=>{ if(mode==='loading') goLocal('저장소에 연결하지 못해 이 브라우저에만 임시 저장됩니다. (claude.ai에서 로그인 상태로 열어주세요)'); },10000);
+  let ns=null;
+  try{ ns = window.claude && claude.use ? await claude.use('db') : null; }catch(e){ ns=null; }
+  if(!ns){ clearTimeout(timer); goLocal('저장소를 쓸 수 없어 이 브라우저에만 임시 저장됩니다.'); return; }
+  db=ns;
+  let gotSites=false, gotCfg=false;
+  const ready=()=>{ if(gotSites&&gotCfg){ clearTimeout(timer); if(mode!=='db'){ mode='db'; banner(''); } render(); } };
+  db.collection('sites').onSnapshot(snap=>{
+    sites = snap.docs.map(d=>migrateSite({...JSON.parse(JSON.stringify(d.data())), id:d.id}));
+    if(!snap.metadata.fromCache) gotSites=true; else if(mode==='loading'){ mode='db'; }
+    ready(); if(mode==='db') render();
+  }, err=>{ clearTimeout(timer); banner('데이터 연결이 끊겼습니다. 새로고침 해주세요. ('+err.code+')'); });
+  db.doc('config/main').onSnapshot(snap=>{
+    cfg = snap.exists ? mergeCfg(snap.data()) : JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+    if(!snap.metadata.fromCache) gotCfg=true;
+    ready(); if(mode==='db') render();
+  }, err=>{ clearTimeout(timer); });
+}
+
+/* ================= 라우팅 ================= */
+function currentView(){ const h=location.hash.replace('#',''); return ['dashboard','sites','settings'].includes(h)?h:'dashboard'; }
+window.addEventListener('hashchange', render);
+function render(){
+  const v=currentView();
+  document.querySelectorAll('nav a').forEach(a=>a.classList.toggle('on',a.dataset.v===v));
+  if(mode==='loading'){ $('#view').innerHTML='<div class="empty">불러오는 중…</div>'; return; }
+  if(document.activeElement && $('#view').contains(document.activeElement) && v==='settings') return; // 설정 입력 중 리렌더 방지
+  if(v==='dashboard') renderDashboard();
+  else if(v==='sites') renderSites();
+  else renderSettings();
+}
+
+/* ================= 대시보드 ================= */
+let recOpen=false;
+function renderDashboard(){
+  const active=sites.filter(s=>!isDone(s));
+  const cnt=k=>sites.filter(s=>(s.status||'진행')===k).length;
+  const recent=[]; sites.forEach(s=>{ const ff=flowFor(s.type,s).map(x=>x.id); Object.entries(s.stepDone||{}).forEach(([k,d])=>{ if(stepById(k)) recent.push({s,k,d,i:ff.indexOf(k)}); }); });
+  recent.sort((a,b)=>b.d.localeCompare(a.d)||(b.i-a.i)); const recAll=recent.slice(0,20), rec=recOpen?recAll:recAll.slice(0,5);
+  const STALE=14;
+  const weekAgo=(()=>{const d=new Date(today()+'T00:00:00'); d.setDate(d.getDate()-6); return d.toISOString().slice(0,10);})();
+  const monthStr=today().slice(0,7);
+  const weekDone=recent.filter(x=>x.d>=weekAgo).length;
+  const monthOpen=sites.filter(s=>(s.stepDone||{}).b11).filter(s=>((s.stepDone||{}).b11||'').startsWith(monthStr)).length;
+  const stale=active.filter(s=>s.status==='진행').map(s=>({s,d:lastDate(s)})).map(x=>({...x,n:x.d?-ddays(x.d):null}))
+    .filter(x=>x.n==null||x.n>=STALE).sort((a,b)=>(b.n??9999)-(a.n??9999));
+  const envCnt=active.filter(s=>s.type==='환경부').length;
+  const regMap={}; sites.forEach(s=>{ const r=(s.region||'').trim()||'미지정'; (regMap[r]=regMap[r]||[]).push(s); });
+  const regions=Object.entries(regMap).sort((a,b)=>b[1].length-a[1].length||a[0].localeCompare(b[0]));
+  let qtyTot=0, netTot=0, netQty=0;
+  sites.forEach(s=>{ if(s.status==='철거'||s.type==='철거')return; const r=calc(s); qtyTot+=r.qty; if(r.net>0){netTot+=r.net; netQty+=r.qty;} });
+  // 파이프라인: 환경부 순서(전체 단계) 기준
+  const cols=cfg.envOrder.map(stepById).filter(Boolean);
+  const bySt={}; active.forEach(s=>{ (bySt[s.stepId]=bySt[s.stepId]||[]).push(s); });
+  const noStep=active.filter(s=>!stepById(s.stepId));
+  $('#view').innerHTML=`
+  <div class="kpis">
+    <div class="kpi"><div class="l">전체 현장</div><div class="v">${sites.length}<small>곳</small></div></div>
+    <div class="kpi"><div class="l">진행</div><div class="v" style="color:var(--acc)">${cnt('진행')}</div></div>
+    <div class="kpi"><div class="l">보류</div><div class="v">${cnt('보류')}</div></div>
+    <div class="kpi"><div class="l">개통</div><div class="v" style="color:var(--grn)">${cnt('개통')}</div></div>
+    <div class="kpi"><div class="l">철거</div><div class="v" style="color:var(--org)">${cnt('철거')}</div></div>
+    <div class="kpi"><div class="l">총 운영기수</div><div class="v">${qtyTot.toLocaleString()}<small>기</small></div></div>
+    <div class="kpi"><div class="l">최근 7일 완료 단계</div><div class="v" style="color:var(--acc)">${weekDone}<small>건</small></div></div>
+    <div class="kpi"><div class="l">이번 달 개통</div><div class="v" style="color:var(--grn)">${monthOpen}<small>곳</small></div></div>
+    <div class="kpi"><div class="l">진행 중 환경부</div><div class="v">${envCnt}<small>곳</small></div></div>
+  </div>
+  ${regions.length?`<div class="card">
+    <h2>지역별 현황 <span class="muted">누르면 현장 목록에서 해당 지역만 보기</span></h2>
+    <div class="regs">${regions.map(([r,l])=>{ const c=k=>l.filter(s=>(s.status||'진행')===k).length;
+      return `<div class="reg" data-reg="${esc(r)}"><div class="rn">${esc(r)}</div><div class="rv">${l.length}<small>곳</small></div>
+        <div class="rs"><span style="color:var(--acc)">진행 ${c('진행')}</span>${c('보류')?`<span>보류 ${c('보류')}</span>`:''}<span style="color:var(--grn)">개통 ${c('개통')}</span>${c('철거')?`<span style="color:var(--org)">철거 ${c('철거')}</span>`:''}</div></div>`; }).join('')}</div>
+  </div>`:''}
+  <div class="card">
+    <h2>단계별 진행 현황 <span class="muted">진행·보류 현장 · 초록 = 환경부 전용 단계</span></h2>
+    ${active.length===0?'<div class="empty">진행 중인 현장이 없습니다. 오른쪽 위 “+ 현장 추가”로 시작하세요.</div>':`
+    <div class="pgrid">
+      <div class="pipe2">
+        <div class="psep inst">설치 업무</div>
+        ${noStep.length?col('단계 미지정',noStep,false):''}
+        ${cols.map(st=>col(st.name,bySt[st.id]||[],st.id[0])).join('')}
+      </div>
+      <div class="pipe2">
+        <div class="psep">철거 업무</div>
+        ${(cfg.removeSteps||[]).map(st=>col((st.br?st.br+') ':'')+st.name,bySt[st.id]||[],'r')).join('')}
+      </div>
+    </div>`}
+  </div>
+  <div class="card">
+    <h2>정체 현장 <span class="muted">진행 중인데 ${STALE}일 이상 진행 기록이 없는 현장</span></h2>
+    ${stale.length===0?'<div class="muted">정체 현장이 없습니다 👍</div>':`
+    <div class="tablewrap"><table><thead><tr><th>경과</th><th>단지명</th><th>현재 단계</th><th>최근 특이사항</th></tr></thead><tbody>
+    ${stale.map(x=>{ const f=flowFor(x.s.type,x.s); const lastNote=f.map(st=>(x.s.stepNotes||{})[st.id]).filter(Boolean).pop()||''; return `<tr data-id="${x.s.id}"><td><b style="color:var(--red)">${x.n==null?'기록 없음':x.n+'일'}</b></td><td>${esc(x.s.name)}</td><td>${esc(stepName(x.s.stepId))}</td><td class="notecell">${esc(lastNote.replace(/\s*\n\s*/g,' / '))}</td></tr>`; }).join('')}
+    </tbody></table></div>`}
+  </div>
+  <div class="card">
+    <h2>최근 진행 내역 ${recAll.length>5?`<button class="lnk" id="recToggle" style="font-size:12px;margin-left:auto">${recOpen?'접기 ▲':`더 보기 (${recAll.length}건) ▼`}</button>`:''}</h2>
+    ${rec.length===0?'<div class="muted">아직 완료한 단계가 없습니다.</div>':`
+    <div class="tablewrap"><table><thead><tr><th>진행일자</th><th>단지명</th><th>완료한 단계</th><th>특이사항</th></tr></thead><tbody>
+    ${rec.map(x=>`<tr data-id="${x.s.id}"><td>${esc(x.d)}</td><td>${esc(x.s.name)}</td><td>${esc(stepName(x.k))}</td><td class="notecell">${esc((x.s.stepNotes||{})[x.k]||'')}</td></tr>`).join('')}
+    </tbody></table></div>`}
+  </div>`;
+  bindOpen();
+  document.querySelectorAll('[data-reg]').forEach(el=>el.onclick=()=>{ filt.regions=[el.dataset.reg]; filt.q=''; location.hash='sites'; });
+  const rt=$('#recToggle'); if(rt) rt.onclick=()=>{ recOpen=!recOpen; renderDashboard(); };
+  function col(title,list,kind){
+    const env=kind==='e';
+    return `<div class="prow ${list.length?'':'empty0'} ${env?'env':''} ${kind==='r'?'rmrow':''}"><div class="pname">${esc(title)}${env?'<span class="envtag">환경부</span>':''}</div><div class="pn">${list.length}</div><div class="pitems">
+      ${list.map(s=>`<span class="pchip ${s.status==='보류'?'hold':''}" data-id="${s.id}"><b>${esc(s.name||'(이름 없음)')}</b> <span class="muted">${esc(s.region||'')}${s.status==='보류'?' · 보류':''}</span></span>`).join('')}
+    </div></div>`;
+  }
+}
+function lastDate(s){ const ds=Object.values(s.stepDone||{}); const c=(s.stepDates||{})[s.stepId]; if(c&&!isDone(s)) ds.push(c); return ds.sort().pop()||''; }
+function ddayHtml(s){
+  const d=lastDate(s); if(!d) return '<span class="muted">-</span>';
+  const n=-ddays(d); return `<span>${esc(d.slice(5).replace('-','/'))}</span> <span class="muted">${n<=0?'오늘':n+'일 전'}</span>`;
+}
+function bindOpen(){ document.querySelectorAll('[data-id]').forEach(el=>el.onclick=()=>openSite(el.dataset.id)); }
+
+/* ================= 현장 목록 ================= */
+let filt={q:'',status:'',type:'',regions:[]};
+document.addEventListener('click',()=>{ const f=document.getElementById('fr'); if(f) f.classList.remove('open'); });
+const regionOf=s=>(s.region||'').trim()||'미지정';
+function miniFlow(s){
+  const f=flowFor(s.type,s), ci=f.findIndex(x=>x.id===s.stepId), done=isDone(s);
+  const tail = (s.type==='철거'&&!s.branch&&!done) ? `<div class="mfs br" title="협의 결과에 따라 철거/유지"><i></i><span>철거 / 유지</span></div>` : '';
+  return `<div class="mf">${f.map((st,i)=>{ const c= done||i<ci ? 'd' : (i===ci?'c':''); return `<div class="mfs ${c} ${st.id.startsWith('e')?'e':''}" title="${esc(st.name)}${s.stepDone&&s.stepDone[st.id]?' · '+esc(s.stepDone[st.id]):''}"><i></i><span>${esc(st.name)}</span></div>`; }).join('')}${tail}</div>`;
+}
+function siteInfo(s){
+  if(s.type==='철거'){ const k=s.keep||{}; const parts=[];
+    parts.push(s.branch?`🤝 협의 결과: <b>${esc(s.branch)}</b>`:'🤝 협의 결과 대기');
+    if(s.branch==='유지'){ if(k.qty) parts.push(`${esc(k.qty)}기 유지`); if(k.years) parts.push(`${esc(k.years)}년`); if(k.auto) parts.push(`자동연장 ${esc(k.auto)}`); }
+    return parts.join('<span class="sep">|</span>'); }
+  const inv=s.invest||{}, P=id=>cfg.prices.find(x=>x.id===id), r=calc(s), parts=[];
+  if(P(inv.chargerModel)) parts.push(`🔌 ${esc(P(inv.chargerModel).model)} × ${num(inv.chargerQty)}기`);
+  const st=[['poleModel','poleQty'],['helmetModel','helmetQty'],['hpoleModel','hpoleQty']].filter(([m,q])=>P(inv[m])&&num(inv[q])).map(([m,q])=>`${P(inv[m]).type} ${num(inv[q])}`);
+  if(st.length) parts.push('🪵 '+st.join(' · '));
+  if((s.points||[]).length) parts.push(`⚡ 거점 ${s.points.length}곳 · ${Math.round(r.kwTot*10)/10}kW`);
+  return parts.join('<span class="sep">|</span>') || '<span class="muted">투자비 탭에서 충전기 정보를 입력하세요</span>';
+}
+const openNotes=new Set();
+function notesHtml(s){
+  const f=flowFor(s.type,s), notes=f.filter(st=>((s.stepNotes||{})[st.id]||'').trim()).map(st=>({st,t:s.stepNotes[st.id].trim()})).reverse();
+  if(!notes.length) return '';
+  const open=!openNotes.has(s.id), show=open?notes:notes.slice(0,2);
+  return `<div class="snotes ${open?'open':''}">${show.map(n=>`<div class="sn"><span class="snk">${esc(n.st.name)}</span><span class="snv">${esc(open?n.t:n.t.replace(/\s*\n\s*/g,' / '))}</span></div>`).join('')}
+    ${notes.length>2||notes.some(n=>n.t.includes('\n'))?`<button class="lnk" data-notes="${s.id}">${open?'접기':`특이사항 ${notes.length}개 모두 보기`}</button>`:''}</div>`;
+}
+function renderSites(){
+  $('#view').innerHTML=`
+  <div class="toolbar">
+    <input id="fq" placeholder="단지명 검색" value="${esc(filt.q)}" style="min-width:200px">
+    <select id="fs"><option value="">상태 전체</option>${STATUSES.map(s=>`<option ${filt.status===s?'selected':''}>${s}</option>`).join('')}</select>
+    <select id="ft"><option value="">유형 전체</option><option ${filt.type==='자체투자'?'selected':''}>자체투자</option><option ${filt.type==='환경부'?'selected':''}>환경부</option><option ${filt.type==='철거'?'selected':''}>철거</option></select>
+    <div class="msel" id="fr"><button class="mselbtn" id="frBtn"></button><div class="mselpop" id="frPop"></div></div>
+    <span class="muted" id="fcount"></span>
+  </div>
+  <div id="tb" class="slist"></div>`;
+  const draw=()=>{
+    const q=filt.q.trim().toLowerCase();
+    const list=sites.filter(s=>(!q||(s.name||'').toLowerCase().includes(q))&&(!filt.regions.length||filt.regions.includes(regionOf(s)))&&(!filt.status||(s.status||'진행')===filt.status)&&(!filt.type||s.type===filt.type))
+      .sort((a,b)=>(a.code||'').localeCompare(b.code||''));
+    $('#fcount').textContent=`${list.length}곳`;
+    $('#tb').innerHTML = list.length===0 ? `<div class="empty card">${sites.length?'조건에 맞는 현장이 없습니다.':'등록된 현장이 없습니다. “+ 현장 추가”를 눌러주세요.'}</div>` :
+    list.map(s=>{ const r=calc(s), p=progress(s), note=(s.stepNotes||{})[s.stepId]||'';
+      return `<div class="srow ${isDone(s)?'done':''}" data-id="${s.id}">
+        <div class="sl">
+          <div class="sname">${esc(s.name)} <span class="tag ${typeCls(s.type)}">${esc(s.type||'자체투자')}</span> <span class="tag ${esc(s.status||'진행')}">${esc(s.status||'진행')}</span></div>
+          <div class="smeta">${esc(s.code)} · ${esc(s.region||'-')}${num(s.parking)>0?' · 주차 '+num(s.parking).toLocaleString()+'면':''}${num(s.otherQty)>0?' · 타사 '+num(s.otherQty)+'기':''}</div>
+          <div class="sinfo">${siteInfo(s)}</div>
+        </div>
+        <div class="sm">
+          <div class="scur"><b>${isDone(s)?doneLabel(s):esc(stepName(s.stepId)||'-')}</b> <span class="muted">${Math.round(p*100)}% · 최근 진행 ${ddayHtml(s)}</span></div>
+          ${miniFlow(s)}
+          ${notesHtml(s)}
+        </div>
+        ${s.type==='철거'?`<div class="sr"><div class="muted">협의 결과</div><div class="sval" style="color:var(--org)">${esc(s.branch||'대기')}</div><div class="muted">${s.branch==='유지'&&(s.keep||{}).qty?esc(s.keep.qty)+'기 유지':''}</div></div>`:`<div class="sr">
+          <div class="muted">기당 투자비</div>
+          <div class="sval">${r.perUnit?won(r.perUnit):'-'}<small>${r.perUnit?'원':''}</small></div>
+          <div class="muted">${r.qty?r.qty+'기':''}${s.type==='환경부'&&r.subsidy?' · 보조금 반영':''}</div>
+        </div>`}
+      </div>`;}).join('');
+    bindOpen();
+    document.querySelectorAll('[data-notes]').forEach(b=>b.onclick=e=>{ e.stopPropagation(); const id=b.dataset.notes; openNotes.has(id)?openNotes.delete(id):openNotes.add(id); draw(); });
+  };
+  $('#fq').oninput=e=>{filt.q=e.target.value;draw();};
+  $('#fs').onchange=e=>{filt.status=e.target.value;draw();};
+  $('#ft').onchange=e=>{filt.type=e.target.value;draw();};
+  const allRegs=[...new Set(sites.map(regionOf))].sort();
+  filt.regions=filt.regions.filter(r=>allRegs.includes(r));
+  const drawReg=()=>{
+    const sel=filt.regions;
+    $('#frBtn').innerHTML=(sel.length===0?'지역 전체':sel.length===1?esc(sel[0]):`지역 ${sel.length}개`)+' <span class="muted">▾</span>';
+    $('#frBtn').classList.toggle('on',sel.length>0);
+    $('#frPop').innerHTML=`<label class="mo all"><input type="checkbox" data-rall ${sel.length===0||sel.length===allRegs.length?'checked':''}> (모두 선택)</label>`+
+      allRegs.map(r=>`<label class="mo"><input type="checkbox" data-rg="${esc(r)}" ${sel.length===0||sel.includes(r)?'checked':''}> ${esc(r)} <span class="muted">${sites.filter(s=>regionOf(s)===r).length}</span></label>`).join('')||'<div class="muted" style="padding:6px">지역 없음</div>';
+    const ra=document.querySelector('[data-rall]'); if(ra) ra.onchange=()=>{ filt.regions=[]; drawReg(); draw(); };
+    document.querySelectorAll('[data-rg]').forEach(c=>c.onchange=()=>{
+      const checked=[...document.querySelectorAll('[data-rg]')].filter(x=>x.checked).map(x=>x.dataset.rg);
+      filt.regions = checked.length===allRegs.length ? [] : (checked.length===0 ? ['__none__'] : checked);
+      drawReg(); draw(); });
+  };
+  drawReg();
+  $('#frBtn').onclick=e=>{ e.stopPropagation(); $('#fr').classList.toggle('open'); };
+  $('#frPop').onclick=e=>e.stopPropagation();
+
+  draw();
+}
+
+/* ================= 현장 상세 ================= */
+let tab='flow', openNote=null, saveTimer=null, saveChain=Promise.resolve();
+function blankInvest(){ return {chargerModel:'',chargerQty:'',poleModel:'',poleQty:'',helmetModel:'',helmetQty:'',hpoleModel:'',hpoleQty:'',canopy:'',supv:true}; }
+function normalize(s){
+  s.invest=Object.assign(blankInvest(),s.invest||{}); s.points=s.points||[]; s.elec=s.elec||[];
+  s.stepDone=s.stepDone||{}; s.stepDates=s.stepDates||{}; s.stepNotes=s.stepNotes||{}; s.status=s.status||'진행'; s.type=s.type||'자체투자';
+  const f=flowFor(s.type,s); if(!f.find(x=>x.id===s.stepId)) s.stepId=(f.find(x=>!s.stepDone[x.id])||f[f.length-1]||{}).id||'';
+  return s;
+}
+function nextCode(){ const n=sites.reduce((m,s)=>Math.max(m,parseInt(String(s.code||'').replace(/\D/g,''))||0),0)+1; return 'S-'+String(n).padStart(3,'0'); }
+
+/* 새 현장: 간단 입력 */
+$('#addSite').onclick=()=>{
+  editing=null; $('#drawer').classList.add('open');
+  $('#panel').innerHTML=`<div class="phead"><h2>새 현장</h2><button class="btn" id="closeBtn">닫기</button></div>
+  <div class="pbody"><div class="card" style="max-width:520px">
+    <div class="grid" style="grid-template-columns:1fr 1fr">
+      <div class="f" style="grid-column:1/3"><label>단지명</label><input id="nName" placeholder="예: OO마을 1단지"></div>
+      <div class="f"><label>지역</label><input id="nRegion"></div>
+      <div class="f"><label>유형</label><select id="nType">${TYPES.map(t=>`<option>${t}</option>`).join('')}</select></div>
+    </div>
+    <div style="margin-top:14px"><button class="btn pri" id="nCreate">만들기</button></div>
+  </div></div>`;
+  $('#closeBtn').onclick=()=>closePanel(); $('#nName').focus();
+  $('#nCreate').onclick=async()=>{
+    const name=$('#nName').value.trim(); if(!name){ toast('단지명을 입력하세요'); return; }
+    const s=normalize({id:uid(),code:nextCode(),name,region:$('#nRegion').value.trim(),type:$('#nType').value,parking:'',address:'',ourLoc:'',otherQty:'',otherLoc:'',contact:'',memo:'',points:[{name:'1거점',qty:'',supply:'모자분리',insp:false,safe:true}]});
+    try{ await saveSite(s); }catch(e){ toast('저장 실패: '+(e.code||e.message)); return; }
+    editing=s; tab='flow'; drawPanel();
+  };
+};
+function openSite(id){
+  const s=sites.find(x=>x.id===id); if(!s) return;
+  editing=normalize(JSON.parse(JSON.stringify(s))); tab='flow'; openNote=null;
+  drawPanel(); $('#drawer').classList.add('open');
+}
+function flushSave(){ if(saveTimer){ clearTimeout(saveTimer); saveTimer=null; doSaveNow(); } return saveChain; }
+function doSaveNow(){
+  const snap=JSON.parse(JSON.stringify(editing)); setSS('저장 중…');
+  saveChain=saveChain.then(()=>saveSite(snap)).then(()=>setSS('저장됨 ✓')).catch(e=>{ setSS('저장 실패'); toast('저장 실패: '+(e.code||e.message)); });
+}
+function queueSave(delay=800){ setSS('저장 중…'); clearTimeout(saveTimer); saveTimer=setTimeout(()=>{ saveTimer=null; doSaveNow(); },delay); }
+function setSS(t){ const el=$('#ss'); if(el) el.textContent=t; }
+async function closePanel(){ if(editing) await flushSave(); $('#drawer').classList.remove('open'); editing=null; render(); }
+$('#drawer').addEventListener('mousedown',e=>{ if(e.target.id==='drawer') closePanel(); });
+
+function opts(list,val,blank='선택'){ return `<option value="">${blank}</option>`+list.map(o=>`<option value="${esc(o.v)}" ${o.v===val?'selected':''}>${esc(o.t)}</option>`).join(''); }
+function priceOpts(type,val){ return opts(cfg.prices.filter(p=>p.type===type).map(p=>({v:p.id,t:`${p.model} (${won(priceOf(p.id))})`})),val); }
+
+function drawPanel(){
+  const s=editing;
+  $('#panel').innerHTML=`
+  <div class="phead">
+    <h2>${esc(s.name)} <span class="muted">${esc(s.code)} · ${esc(s.region||'')}</span> <span class="tag ${typeCls(s.type)}">${esc(s.type)}</span> ${s.status!=='진행'?`<span class="tag ${esc(s.status)}">${esc(s.status)}</span>`:''}</h2>
+    <span class="save-state" id="ss"></span>
+    <button class="btn" id="closeBtn">닫기</button>
+  </div>
+  <div class="tabs">
+    <button class="tab ${tab==='flow'?'on':''}" data-tab="flow">진행</button>
+    ${s.type==='철거'?'':`<button class="tab ${tab==='cost'?'on':''}" data-tab="cost">투자비</button>`}
+    <button class="tab ${tab==='info'?'on':''}" data-tab="info">현장 정보</button>
+  </div>
+  <div class="pbody" id="tabBody"></div>`;
+  $('#closeBtn').onclick=()=>closePanel();
+  document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{ tab=b.dataset.tab; drawPanel(); });
+  if(tab==='cost'&&s.type==='철거') tab='flow';
+  if(tab==='flow') drawFlow(); else if(tab==='cost') drawCost(); else drawInfo();
+}
+
+/* ---- 진행 탭 ---- */
+function drawFlow(){
+  const s=editing, flow=flowFor(s.type,s), ci=flow.findIndex(x=>x.id===s.stepId);
+  const done=isDone(s), cur=flow[ci], nxt=flow[ci+1];
+  const items=cur?checkItems(cur):[]; s.stepChecks=s.stepChecks||{}; const ck=cur?(s.stepChecks[cur.id]||{}):{};
+  s.keep=s.keep||{};
+  const allOk=items.every((t,k)=>ck[k]) && (!cur||!cur.branch||!!s.branch);
+  $('#tabBody').innerHTML=`
+  <div class="flowwrap">
+    ${done?`<div class="curcard donecard"><div class="stepno">전체 ${flow.length}단계 완료</div><div class="curname">${s.status==='철거'?'🏁':'🎉'} ${doneLabel(s)}</div>
+        <div style="margin-top:12px"><button class="btn" id="undoBtn">← 마지막 단계 되돌리기</button></div></div>`:
+    cur?`<div class="curcard">
+      <div class="stepno">현재 단계 ${ci+1} / ${flow.length}${cur.id.startsWith('e')?' · 환경부':''}${cur.br?' · '+cur.br+' 시':''}</div>
+      <div class="curname">${esc(cur.name)}</div>
+      ${items.length?`<div class="checks">${items.map((t,k)=>`<label class="chk ${ck[k]?'on':''}"><input type="checkbox" data-ck="${k}" ${ck[k]?'checked':''}> <span>${esc(t)}</span></label>`).join('')}</div>`:''}
+      ${cur.branch?`<div class="brsel"><button data-br="철거" class="${s.branch==='철거'?'on':''}">🔨 철거</button><button data-br="유지" class="${s.branch==='유지'?'on':''}">🤝 유지</button></div>`:''}
+      ${cur.keep?`<div class="keepf">
+        <div class="f"><label>유지 기수</label><input type="number" min="0" data-kp="qty" value="${esc(s.keep.qty||'')}" placeholder="기"></div>
+        <div class="f"><label>유지 기간 (년)</label><input type="number" min="0" data-kp="years" value="${esc(s.keep.years||'')}"></div>
+        <div class="f"><label>자동계약연장 (1년)</label><select data-kp="auto"><option value="">선택</option>${['예','아니오'].map(x=>`<option ${s.keep.auto===x?'selected':''}>${x}</option>`).join('')}</select></div>
+        <div class="f"><label>유지 조건</label><input data-kp="cond" value="${esc(s.keep.cond||'')}" placeholder="요금, 부지사용료 등"></div>
+      </div>`:''}
+      <div class="f" style="margin-top:14px"><label>특이사항${cur.note?' ('+esc(cur.note)+')':''}</label><textarea id="curNote" rows="3" placeholder="${cur.note?esc(cur.note)+' 등':'이 단계에서 있었던 일, 이슈, 연락 내용 등'}">${esc(s.stepNotes[cur.id]||'')}</textarea></div>
+      <div class="f" style="margin-top:10px;max-width:200px"><label>진행일자</label><input type="date" id="curDate" value="${esc(s.stepDates[cur.id]||today())}"></div>
+      <div class="curbtns">
+        <button class="btn pri big" id="doneBtn" ${allOk?'':'disabled'}>✓ 완료${nxt?' → 다음: '+esc(nxt.name):(cur.branch?'':' (전체 완료)')}</button>
+        ${ci>0?'<button class="btn" id="undoBtn">← 이전 단계로</button>':''}
+      </div>
+      ${allOk?'':`<div class="muted" style="margin-top:8px;color:var(--org)">${cur.branch&&!s.branch?'협의 결과(철거 / 유지)를 선택해야 완료할 수 있어요':'체크사항을 모두 확인해야 완료할 수 있어요'}</div>`}
+    </div>`:'<div class="muted">단계를 찾을 수 없습니다.</div>'}
+    <div class="card" style="margin-top:16px">
+      <h2>전체 흐름</h2>
+      <ul class="tl">
+        ${flow.map((st,i)=>{ const isDone=done||i<ci, isCur=!done&&i===ci, note=s.stepNotes[st.id];
+          return `<li class="${isDone?'done':''} ${isCur?'cur':''}">
+            <span class="dot">${isDone?'✓':i+1}</span>
+            <div class="tlc">
+              <div class="tlh"><span class="nm">${esc(st.name)}</span>${st.id.startsWith('e')?'<span class="envtag">환경부</span>':''}
+                ${s.stepDone[st.id]&&isDone?`<span class="dt">${esc(s.stepDone[st.id])}</span>`:''}
+                ${isDone?`<button class="lnk" data-note="${st.id}">${openNote===st.id?'닫기':'수정'}</button>`:''}</div>
+              ${openNote===st.id?`<div class="editrow"><label class="muted">진행일자 <input type="date" data-dateedit="${st.id}" value="${esc(s.stepDone[st.id]||'')}"></label></div><textarea class="noteedit" data-noteedit="${st.id}" rows="2" placeholder="특이사항">${esc(note||'')}</textarea>`:(note&&!isCur?`<div class="note">${esc(note)}</div>`:'')}
+            </div></li>`; }).join('')}
+        ${s.type==='철거'&&!s.branch?'<li><span class="dot">…</span><div class="tlc"><div class="tlh"><span class="nm" style="color:var(--org)">협의 결과에 따라 철거 / 유지 단계로 나뉨</span></div></div></li>':''}
+      </ul>
+    </div>
+  </div>`;
+  document.querySelectorAll('[data-ck]').forEach(c=>c.onchange=()=>{ const m=Object.assign({},s.stepChecks[cur.id]||{}); if(c.checked) m[c.dataset.ck]=true; else delete m[c.dataset.ck]; s.stepChecks[cur.id]=m; queueSave(0); drawFlow(); });
+  document.querySelectorAll('[data-br]').forEach(b=>b.onclick=()=>{ s.branch=b.dataset.br; queueSave(0); drawFlow(); });
+  document.querySelectorAll('[data-kp]').forEach(el=>el.addEventListener(el.tagName==='SELECT'?'change':'input',()=>{ s.keep[el.dataset.kp]=el.value; queueSave(); }));
+  const n=$('#curNote'); if(n) n.oninput=()=>{ s.stepNotes[cur.id]=n.value; queueSave(); };
+  const d=$('#curDate'); if(d) d.onchange=()=>{ s.stepDates[cur.id]=d.value; queueSave(0); };
+  const db_=$('#doneBtn'); if(db_) db_.onclick=()=>{
+    s.stepDone[cur.id]=s.stepDates[cur.id]||today();
+    if(nxt){ s.stepId=nxt.id; toast(`“${cur.name}” 완료 → 다음: ${nxt.name}`); }
+    else { s.status = s.type==='철거' ? (s.branch==='유지'?'개통':'철거') : '개통'; toast(doneLabel(s)+'!'); }
+    queueSave(0); drawPanel();
+  };
+  const ub=$('#undoBtn'); if(ub) ub.onclick=()=>{
+    if(done){ s.status='진행'; s.stepId=flow[flow.length-1].id; delete s.stepDone[s.stepId]; }
+    else { const prev=flow[ci-1]; s.stepId=prev.id; delete s.stepDone[prev.id]; }
+    queueSave(0); drawPanel();
+  };
+  document.querySelectorAll('[data-note]').forEach(b=>b.onclick=()=>{ openNote= openNote===b.dataset.note?null:b.dataset.note; drawFlow(); const t=document.querySelector(`[data-noteedit="${openNote}"]`); if(t) t.focus(); });
+  document.querySelectorAll('[data-dateedit]').forEach(t=>{ t.onchange=()=>{ if(t.value){ s.stepDone[t.dataset.dateedit]=t.value; queueSave(0); } }; });
+  document.querySelectorAll('[data-noteedit]').forEach(t=>{ t.oninput=()=>{ s.stepNotes[t.dataset.noteedit]=t.value; queueSave(); }; });
+}
+
+/* ---- 현장 정보 탭 ---- */
+function drawInfo(){
+  const s=editing;
+  const fld=(l,k,t='text',span)=>`<div class="f" ${span?`style="grid-column:span ${span}"`:''}><label>${l}</label><input type="${t}" ${t==='number'?'min="0"':''} data-k="${k}" value="${esc(s[k])}"></div>`;
+  const ta=(l,k,ph)=>`<div class="f" style="grid-column:1/-1"><label>${l}</label><textarea data-k="${k}" rows="2" placeholder="${ph||''}">${esc(s[k])}</textarea></div>`;
+  $('#tabBody').innerHTML=`<div class="card" style="max-width:860px">
+    <div class="grid" style="grid-template-columns:repeat(4,minmax(0,1fr))">
+      ${fld('현장ID','code')}${fld('단지명','name')}${fld('지역','region')}${fld('주차면수','parking','number')}
+      ${fld('현장 주소','address','text',3)}
+      <div class="f"><label>유형</label><select data-k="type">${TYPES.map(t=>`<option ${s.type===t?'selected':''}>${t}</option>`).join('')}</select></div>
+      ${fld('관리소 연락처','contact')}
+      <div class="f"><label>상태</label><select data-k="status">${STATUSES.map(x=>`<option ${s.status===x?'selected':''}>${x}</option>`).join('')}</select></div>
+      ${fld('타사 설치 기수','otherQty','number')}
+      <div></div>
+      ${ta('당사 설치 위치','ourLoc','예: 지하 1층 101동 앞, 지상 주차장 입구')}
+      ${ta('타사 설치 위치','otherLoc','예: 지하 2층 105동 (OO사 7kW 10기)')}
+    </div>
+    <div class="f" style="margin-top:10px"><label>메모</label><textarea data-k="memo" rows="4">${esc(s.memo)}</textarea></div>
+    <div style="margin-top:18px;display:flex;gap:8px;align-items:center">
+      <button class="btn danger" id="delBtn">현장 삭제</button>
+      <span class="confirm" id="delConfirm"><span class="muted" style="color:var(--red)">정말 삭제할까요?</span><button class="btn sm danger" id="dcYes">삭제</button><button class="btn sm" id="dcNo">취소</button></span>
+    </div></div>`;
+  document.querySelectorAll('[data-k]').forEach(el=>el.addEventListener(el.tagName==='SELECT'?'change':'input',()=>{
+    s[el.dataset.k]=el.value;
+    if(el.dataset.k==='type'){ normalize(s); queueSave(0); drawPanel(); return; }
+    if(el.dataset.k==='status'){ queueSave(0); drawPanel(); return; }
+    queueSave();
+  }));
+  $('#delBtn').onclick=()=>$('#delConfirm').classList.add('show');
+  $('#dcNo').onclick=()=>$('#delConfirm').classList.remove('show');
+  $('#dcYes').onclick=async()=>{ clearTimeout(saveTimer); saveTimer=null; try{ await saveChain; await deleteSite(s.id); toast('삭제했습니다'); editing=null; $('#drawer').classList.remove('open'); render(); }catch(e){ toast('삭제 실패: '+(e.code||e.message)); } };
+}
+
+/* ---- 투자비 탭 ---- */
+function drawCost(){
+  const s=editing, inv=s.invest;
+  const irow=(label,mk,qk)=>`<tr><td>${label}</td><td><select data-i="${mk}">${priceOpts(label,inv[mk])}</select></td><td><input type="number" data-i="${qk}" value="${esc(inv[qk])}"></td><td class="num" data-amt="${mk}"></td></tr>`;
+  $('#tabBody').innerHTML=`
+  <div class="two" style="grid-template-columns:1fr 300px">
+    <div class="card">
+      <div class="sub" style="margin-top:0">충전기 · 스탠드</div>
+      <table class="mini"><thead><tr><th>구분</th><th>모델</th><th style="width:70px">수량</th><th class="num">금액</th></tr></thead><tbody>
+        ${irow('충전기','chargerModel','chargerQty')}${irow('스탠드폴','poleModel','poleQty')}${irow('헬멧','helmetModel','helmetQty')}${irow('헬멧형 스탠드폴','hpoleModel','hpoleQty')}
+        <tr><td>캐노피</td><td colspan="2"><input data-i="canopy" value="${esc(inv.canopy)}" placeholder="금액(원)"></td><td class="num" data-amt="canopy"></td></tr>
+      </tbody></table>
+      <div class="sub">거점 (계약전력·법정비용) <button class="btn sm" id="addPt">+ 거점</button> <span id="ptWarn" style="color:var(--org);font-weight:500;font-size:12px"></span></div>
+      <table class="mini"><thead><tr><th>거점</th><th style="width:80px">완속 기수</th><th class="num" style="width:60px">kW</th><th>수전방식</th><th>사용전검사</th><th>안전점검</th><th class="num">법정비용</th><th></th></tr></thead><tbody id="ptBody"></tbody></table>
+      <div class="sub">전기공사비 <button class="btn sm" id="addEl">+ 공종</button></div>
+      <table class="mini"><thead><tr><th>공종명</th><th style="width:60px">수량</th><th style="width:55px">단위</th><th style="width:110px">단가</th><th class="num">금액</th><th></th></tr></thead><tbody id="elBody"></tbody></table>
+      <label style="display:flex;gap:6px;align-items:center;margin-top:12px;font-size:13px"><input type="checkbox" id="supvChk" ${inv.supv!==false?'checked':''}> 감리비 포함</label>
+    </div>
+    <div><div class="sum" id="sumBox" style="position:sticky;top:0"></div><div class="muted" style="margin-top:6px">부가세 별도 · EVCS-Simul 공사비 기준</div></div>
+  </div>`;
+  drawPoints(); drawElec(); drawSum();
+  document.querySelectorAll('[data-i]').forEach(el=>el.addEventListener(el.tagName==='SELECT'?'change':'input',()=>{ let v=el.value; if(el.type==='number'&&num(v)<0){v='0';el.value='0';} inv[el.dataset.i]=v; queueSave(); drawSum(); }));
+  $('#supvChk').onchange=e=>{ inv.supv=e.target.checked; queueSave(); drawSum(); };
+  $('#addPt').onclick=()=>{ s.points.push({name:(s.points.length+1)+'거점',qty:'',supply:'모자분리',insp:false,safe:true}); queueSave(); drawPoints(); drawSum(); };
+  $('#addEl').onclick=()=>{ s.elec.push({name:'',qty:1,unit:'식',price:''}); queueSave(); drawElec(); drawSum(); };
+}
+function drawPoints(){
+  const s=editing;
+  $('#ptBody').innerHTML = s.points.length===0?'<tr><td colspan="8" class="muted">거점을 추가하세요</td></tr>':
+  s.points.map((p,i)=>`<tr>
+    <td><input data-p="${i}" data-f="name" value="${esc(p.name)}"></td>
+    <td><input type="number" min="0" data-p="${i}" data-f="qty" value="${esc(p.qty!==undefined?p.qty:(p.kw?Math.round(num(p.kw)/chargerKw(s.invest.chargerModel)):''))}" placeholder="기"></td>
+    <td class="num" data-ptkw="${i}"></td>
+    <td><select data-p="${i}" data-f="supply">${SUPPLY.map(x=>`<option ${p.supply===x?'selected':''}>${x}</option>`).join('')}</select></td>
+    <td style="text-align:center"><input type="checkbox" data-p="${i}" data-f="insp" ${p.insp!==false?'checked':''} style="width:auto"></td>
+    <td style="text-align:center"><input type="checkbox" data-p="${i}" data-f="safe" ${p.safe!==false?'checked':''} style="width:auto"></td>
+    <td class="num" data-pt="${i}"></td>
+    <td><button class="btn sm" data-pdel="${i}">✕</button></td></tr>`).join('');
+  document.querySelectorAll('[data-p]').forEach(el=>el.addEventListener(el.type==='checkbox'||el.tagName==='SELECT'?'change':'input',()=>{
+    const p=s.points[+el.dataset.p]; let v=el.type==='checkbox'? el.checked : el.value; if(el.dataset.f==='qty'&&num(v)<0){ v='0'; el.value='0'; } p[el.dataset.f]=v; queueSave(); drawSum(); }));
+  document.querySelectorAll('[data-pdel]').forEach(b=>b.onclick=()=>{ s.points.splice(+b.dataset.pdel,1); queueSave(); drawPoints(); drawSum(); });
+}
+function drawElec(){
+  const s=editing;
+  $('#elBody').innerHTML = s.elec.length===0?'<tr><td colspan="6" class="muted">공종을 추가하세요</td></tr>':
+  s.elec.map((e,i)=>`<tr>
+    <td><input data-e="${i}" data-f="name" value="${esc(e.name)}" placeholder="예: 배관·배선 공사"></td>
+    <td><input type="number" data-e="${i}" data-f="qty" value="${esc(e.qty)}"></td>
+    <td><input data-e="${i}" data-f="unit" value="${esc(e.unit)}"></td>
+    <td><input data-e="${i}" data-f="price" value="${esc(e.price)}"></td>
+    <td class="num" data-el="${i}"></td>
+    <td><button class="btn sm" data-edel="${i}">✕</button></td></tr>`).join('');
+  document.querySelectorAll('[data-e]').forEach(el=>el.addEventListener('input',()=>{ s.elec[+el.dataset.e][el.dataset.f]=el.value; queueSave(); drawSum(); }));
+  document.querySelectorAll('[data-edel]').forEach(b=>b.onclick=()=>{ s.elec.splice(+b.dataset.edel,1); queueSave(); drawElec(); drawSum(); });
+}
+function drawSum(){
+  const s=editing, inv=s.invest, r=calc(s);
+  const amt={chargerModel:r.charger, poleModel:num(inv.poleQty)*priceOf(inv.poleModel), helmetModel:num(inv.helmetQty)*priceOf(inv.helmetModel), hpoleModel:num(inv.hpoleQty)*priceOf(inv.hpoleModel), canopy:r.canopy};
+  document.querySelectorAll('[data-amt]').forEach(td=>td.textContent=won(amt[td.dataset.amt]));
+  s.points.forEach((p,i)=>{ const td=document.querySelector(`[data-pt="${i}"]`); const x=r.pts[i]; if(td&&x) td.textContent=won(x.insp+x.safe+x.kepco);
+    const k=document.querySelector(`[data-ptkw="${i}"]`); if(k&&x) k.textContent=x.kw? (Math.round(x.kw*10)/10)+'kW':'-'; });
+  const ptQty=s.points.reduce((a,p)=>a+num(p.qty),0), w=$('#ptWarn');
+  if(w) w.textContent = ptQty && ptQty!==r.qty ? `⚠ 거점 기수 합계 ${ptQty}기 ≠ 충전기 수량 ${r.qty}기` : '';
+  s.elec.forEach((e,i)=>{ const td=document.querySelector(`[data-el="${i}"]`); if(td) td.textContent=won(num(e.qty)*num(e.price)); });
+  $('#sumBox').innerHTML=`
+    <div class="row"><span>충전기 (${r.qty}기)</span><span>${won(r.charger)}</span></div>
+    <div class="row"><span>스탠드</span><span>${won(r.stand)}</span></div>
+    ${r.canopy?`<div class="row"><span>캐노피</span><span>${won(r.canopy)}</span></div>`:''}
+    <div class="row"><span>전기공사비</span><span>${won(r.elec)}</span></div>
+    <div class="row"><span>법정비용</span><span>${won(r.insp+r.safe+r.kepco+r.supv)}</span></div>
+    <div class="row sub2"><span>사용전검사비</span><span>${won(r.insp)}</span></div>
+    <div class="row sub2"><span>전기안전점검비</span><span>${won(r.safe)}</span></div>
+    <div class="row sub2"><span>한전불입금</span><span>${won(r.kepco)}</span></div>
+    <div class="row sub2"><span>감리비 (${r.kwTot}kW)</span><span>${won(r.supv)}</span></div>
+    <div class="row tot"><span>공사비 합계</span><span>${won(r.total)}</span></div>
+    ${s.type==='환경부'?`<div class="row grn"><span>환경부 보조금</span><span>-${won(r.subsidy)}</span></div>
+      <div class="row sub2"><span>대상 ${won(r.subBase)} × ${Math.round(cfg.calc.subRate*100)}% / 한도 ${won(r.cap)}</span><span></span></div>`:''}
+    <div class="row tot" style="color:var(--acc)"><span>순 투자비</span><span>${won(r.net)}</span></div>
+    <div class="row"><span>기당 투자비</span><span><b>${r.perUnit?won(r.perUnit):'-'}</b></span></div>`;
+}
+
+/* ================= 설정 ================= */
+function renderSettings(){
+  const c=cfg.calc;
+  const cf=(l,k,step)=>`<div class="f"><label>${l}</label><input type="number" step="${step||1}" data-c="${k}" value="${c[k]}"></div>`;
+  $('#view').innerHTML=`
+  <div class="card">
+    <h2>워크플로우 — 기본 (자체투자) <span class="muted">이름·세부업무·체크포인트 수정 가능</span></h2>
+    <table class="mini"><thead><tr><th style="width:36px">No</th><th>단계</th><th>세부 업무</th><th>체크포인트</th></tr></thead><tbody>
+    ${cfg.baseSteps.map((s,i)=>`<tr><td>${i+1}</td>${['name','task','check'].map(f=>`<td><input data-bs="${i}" data-f="${f}" value="${esc(s[f])}"></td>`).join('')}</tr>`).join('')}
+    </tbody></table>
+  </div>
+  <div class="card">
+    <h2>워크플로우 — 환경부 <span class="muted">초록 = 환경부 전용 단계 (나머지는 위 기본 단계와 연결)</span></h2>
+    <table class="mini"><thead><tr><th style="width:36px">No</th><th>단계</th><th>세부 업무</th><th>체크포인트</th></tr></thead><tbody>
+    ${cfg.envOrder.map((id,i)=>{ const st=stepById(id); if(!st) return ''; const e=id.startsWith('e'); const ei=cfg.envSteps.indexOf(st);
+      return `<tr style="${e?'background:var(--grnl)':''}"><td>${i+1}</td>${['name','task','check'].map(f=> e?`<td><input data-es="${ei}" data-f="${f}" value="${esc(st[f])}"></td>`:`<td class="muted">${esc(st[f])}</td>`).join('')}</tr>`; }).join('')}
+    </tbody></table>
+  </div>
+  <div class="card">
+    <h2>워크플로우 — 철거 <span class="muted">협의 결과에서 철거 / 유지로 나뉨</span></h2>
+    <table class="mini"><thead><tr><th style="width:36px">No</th><th style="width:60px">분기</th><th>단계</th><th>세부 업무</th><th>체크포인트</th></tr></thead><tbody>
+    ${(cfg.removeSteps||[]).map((s,i)=>`<tr><td>${i+1}</td><td class="muted">${esc(s.br||'공통')}</td>${['name','task','check'].map(f=>`<td><input data-rs="${i}" data-f="${f}" value="${esc(s[f])}"></td>`).join('')}</tr>`).join('')}
+    </tbody></table>
+  </div>
+  <div class="card">
+    <h2>단가표 <span class="muted">원, 부가세 별도 · 헬멧형 스탠드폴 = 스탠드폴 + 헬멧 자동 합산</span></h2>
+    <table class="mini"><thead><tr><th>구분</th><th>모델</th><th>상품코드</th><th>상품명</th><th style="width:120px">단가</th></tr></thead><tbody>
+    ${cfg.prices.map((p,i)=>`<tr><td>${esc(p.type)}</td><td><input data-pr="${i}" data-f="model" value="${esc(p.model)}"></td><td><input data-pr="${i}" data-f="code" value="${esc(p.code)}"></td><td><input data-pr="${i}" data-f="name" value="${esc(p.name)}"></td>
+      <td>${p.combo?`<span class="muted">${won(priceOf(p.id))}</span>`:`<input data-pr="${i}" data-f="price" value="${esc(p.price)}">`}</td></tr>`).join('')}
+    </tbody></table>
+    <div style="margin-top:8px;display:flex;gap:6px;align-items:center">
+      <select id="npType"><option>충전기</option><option>스탠드폴</option><option>헬멧</option></select>
+      <button class="btn sm" id="addPrice">+ 품목 추가</button>
+    </div>
+  </div>
+  <div class="card">
+    <h2>공사비 계산 기준 <span class="muted">EVCS-Simul 공사비 탭 기준 · 원, 부가세 별도</span></h2>
+    <div class="grid">
+      ${cf('사용전검사 기본료','inspBase')}${cf('사용전검사 kW당','inspKw')}
+      ${cf('안전점검 기본료','safeBase')}${cf('안전점검 kW당','safeKw')}
+      ${cf('한전불입금 지중 기본(5kW)','kepcoUgBase')}${cf('지중 5kW 초과 kW당','kepcoUgKw')}
+      ${cf('한전불입금 가공 기본(5kW)','kepcoOhBase')}${cf('가공 5kW 초과 kW당','kepcoOhKw')}
+      ${cf('환경부 보조율 (0.5 = 50%)','subRate','0.01')}${cf('보조금 한도: 1번째 기','subCap1')}
+      ${cf('한도: 2~5번째 기 (기당)','subCap2')}${cf('한도: 6번째 기~ (기당)','subCap6')}
+    </div>
+    <div class="sub">감리비 (현장 총 kW 구간)</div>
+    <div class="grid">${c.supv.map(([lim,amt],i)=>`<div class="f"><label>${lim==null?'400kW 초과':lim+'kW 이하'}</label><input type="number" data-sv="${i}" value="${amt}"></div>`).join('')}</div>
+  </div>
+  <div style="display:flex;gap:8px;margin-bottom:18px"><button class="btn pri" id="saveCfg">설정 저장</button><button class="btn" id="resetCfg">기본값으로</button><span class="save-state" id="cfgState"></span></div>
+  <div class="card">
+    <h2>백업</h2>
+    <div class="muted" style="margin-bottom:8px">전체 데이터를 JSON으로 복사해두거나, 붙여넣어 복원할 수 있습니다. 저장 위치: ${mode==='fb'?'Firebase (어느 기기에서든 동일)':mode==='db'?'claude.ai 저장소 (어느 기기에서든 동일)':'이 브라우저 (임시)'}</div>
+    <textarea class="json" id="jsonBox" placeholder="복원할 JSON을 여기 붙여넣기"></textarea>
+    <div style="display:flex;gap:8px;margin-top:8px"><button class="btn" id="copyJson">JSON 복사</button><button class="btn" id="importJson">붙여넣은 JSON으로 복원</button></div>
+  </div>`;
+  const st=()=>{$('#cfgState').textContent='저장 안 됨';};
+  document.querySelectorAll('[data-rs]').forEach(el=>el.oninput=()=>{cfg.removeSteps[+el.dataset.rs][el.dataset.f]=el.value;st();});
+  document.querySelectorAll('[data-bs]').forEach(el=>el.oninput=()=>{cfg.baseSteps[+el.dataset.bs][el.dataset.f]=el.value;st();});
+  document.querySelectorAll('[data-es]').forEach(el=>el.oninput=()=>{cfg.envSteps[+el.dataset.es][el.dataset.f]=el.value;st();});
+  document.querySelectorAll('[data-pr]').forEach(el=>el.oninput=()=>{const p=cfg.prices[+el.dataset.pr]; p[el.dataset.f]= el.dataset.f==='price'? num(el.value): el.value; st();});
+  document.querySelectorAll('[data-c]').forEach(el=>el.oninput=()=>{cfg.calc[el.dataset.c]=num(el.value);st();});
+  document.querySelectorAll('[data-sv]').forEach(el=>el.oninput=()=>{cfg.calc.supv[+el.dataset.sv][1]=num(el.value);st();});
+  $('#addPrice').onclick=()=>{ const t=$('#npType').value; const last=cfg.prices.map((p,i)=>p.type===t?i:-1).filter(i=>i>=0).pop();
+    cfg.prices.splice((last??cfg.prices.length-1)+1,0,{id:'p'+uid(),type:t,model:'새 모델',code:'',name:'',price:0}); document.activeElement.blur(); renderSettings(); st(); };
+  $('#saveCfg').onclick=async()=>{ try{ document.activeElement.blur(); await saveCfg(); toast('설정을 저장했습니다'); }catch(e){ toast('저장 실패: '+(e.code||e.message)); } };
+  $('#resetCfg').onclick=()=>{ cfg=JSON.parse(JSON.stringify(DEFAULT_CONFIG)); document.activeElement.blur(); renderSettings(); st(); toast('기본값을 불러왔습니다. “설정 저장”을 눌러야 반영됩니다'); };
+  $('#copyJson').onclick=async()=>{ const txt=JSON.stringify({cfg,sites},null,1); $('#jsonBox').value=txt; try{ await navigator.clipboard.writeText(txt); toast('복사했습니다'); }catch(e){ $('#jsonBox').select(); toast('아래 칸의 내용을 직접 복사하세요'); } };
+  $('#importJson').onclick=async()=>{
+    let d; try{ d=JSON.parse($('#jsonBox').value); }catch(e){ toast('JSON 형식이 아닙니다'); return; }
+    if(!d||!Array.isArray(d.sites)){ toast('sites 항목이 없습니다'); return; }
+    try{ if(d.cfg){ cfg=mergeCfg(d.cfg); await saveCfg(); } for(const s of d.sites){ if(!s.id) s.id=uid(); await saveSite(s); } toast(`${d.sites.length}개 현장을 복원했습니다`); }
+    catch(e){ toast('복원 실패: '+(e.code||e.message)); }
+  };
+}
+
+render();
+initStore();
+</script>
+</body>
+</html>
