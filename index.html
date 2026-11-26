@@ -329,6 +329,9 @@ function progress(site){
 function checkItems(st){ const out=[]; [st.task,st.check].forEach(t=>String(t||'').split(/\n|,|·/).map(x=>x.trim()).filter(Boolean).forEach(x=>{ if(!out.includes(x)) out.push(x); })); return out; }
 function stepName(id){ const s=stepById(id); return s? s.name : ''; }
 
+/* 숫자 입력칸: 마우스 휠로 값이 바뀌지 않게 (휠은 페이지 스크롤만) */
+document.addEventListener('wheel',e=>{ const el=document.activeElement; if(el&&el.type==='number'&&el===e.target) el.blur(); },{passive:true});
+
 /* ================= 투자비 계산 (EVCS-Simul 공사비 탭 로직, 부가세 별도) ================= */
 function priceOf(id){
   const p=cfg.prices.find(x=>x.id===id); if(!p) return 0;
