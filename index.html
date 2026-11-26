@@ -62,6 +62,8 @@ td.num,th.num{text-align:right}
 .bar{width:90px;height:7px;background:var(--gray);border-radius:4px;overflow:hidden;display:inline-block;vertical-align:middle;margin-right:6px}
 .bar i{display:block;height:100%;background:var(--acc)}
 .tag{display:inline-block;padding:1px 8px;border-radius:10px;font-size:11px;font-weight:500;background:var(--gray);color:var(--ink2)}
+.tag.p긴급{background:#fde8e8;color:var(--red);font-weight:700}.tag.p높음{background:var(--orgl);color:var(--org)}.tag.p낮음{background:var(--gray);color:var(--ink3)}
+.srow.urgent{border-color:#f3b4b4;border-left:4px solid var(--red)}
 .tag.env{background:var(--grnl);color:var(--grn)}.tag.self{background:var(--accl);color:var(--acc)}
 .tag.rm{background:var(--orgl);color:var(--org)}.tag.진행{background:var(--accl);color:var(--acc)}.tag.개통{background:var(--grnl);color:var(--grn)}.tag.철거{background:var(--orgl);color:var(--org)}.tag.보류{background:var(--gray);color:var(--ink2)}
 .dday{font-weight:700}.dday.hot{color:var(--red)}.dday.over{color:#fff;background:var(--red);padding:1px 6px;border-radius:4px}
@@ -296,6 +298,8 @@ const DEFAULT_CONFIG = {
 };
 const STATUSES=['진행','보류','개통','철거'];
 const TYPES=['자체투자','환경부','철거'];
+const PRIOS=['긴급','높음','보통','낮음'];
+const prioOf=s=>PRIOS.includes(s.priority)?s.priority:'보통';
 const isDone=s=>s.status==='개통'||s.status==='철거';
 const typeCls=t=>t==='환경부'?'env':(t==='철거'?'rm':'self');
 function doneLabel(s){ if(s.status==='철거') return '철거 완료'; return s.type==='철거' ? '유지 확정' : '개통 완료'; }
@@ -632,15 +636,15 @@ function renderSites(){
   const draw=()=>{
     const q=filt.q.trim().toLowerCase();
     const list=sites.filter(s=>(!q||(s.name||'').toLowerCase().includes(q))&&(!filt.regions.length||filt.regions.includes(regionOf(s)))&&(!filt.status||(s.status||'진행')===filt.status)&&(!filt.type||s.type===filt.type))
-      .sort((a,b)=>{ const ra=regionOf(a), rb=regionOf(b); return ((ra==='미지정')-(rb==='미지정'))||ra.localeCompare(rb,'ko')||(STATUSES.indexOf(a.status||'진행')-STATUSES.indexOf(b.status||'진행'))||(a.code||'').localeCompare(b.code||''); });
+      .sort((a,b)=>(PRIOS.indexOf(prioOf(a))-PRIOS.indexOf(prioOf(b)))||(STATUSES.indexOf(a.status||'진행')-STATUSES.indexOf(b.status||'진행'))||(a.code||'').localeCompare(b.code||''));
     $('#fcount').textContent=`${list.length}곳`;
     $('#tb').innerHTML = list.length===0 ? `<div class="empty card">${sites.length?'조건에 맞는 현장이 없습니다.':'등록된 현장이 없습니다. “+ 현장 추가”를 눌러주세요.'}</div>` :
-    list.map((s,i)=>{ const r=calc(s), p=progress(s), note=(s.stepNotes||{})[s.stepId]||'', rg=regionOf(s);
-      const gl=list.filter(x=>regionOf(x)===rg), gc=st=>gl.filter(x=>(x.status||'진행')===st).length;
-      const head = (i===0||regionOf(list[i-1])!==rg) ? `<div class="sgrp">📍 ${esc(rg)} <span class="muted">${gl.length}곳 · ${STATUSES.filter(gc).map(st=>st+' '+gc(st)).join(' · ')}</span></div>` : '';
-      return head+`<div class="srow ${isDone(s)?'done':''}" data-id="${s.id}">
+    list.map((s,i)=>{ const r=calc(s), p=progress(s), note=(s.stepNotes||{})[s.stepId]||'', pr=prioOf(s);
+      const gl=list.filter(x=>prioOf(x)===pr), gc=st=>gl.filter(x=>(x.status||'진행')===st).length;
+      const head = (i===0||prioOf(list[i-1])!==pr) ? `<div class="sgrp"><span class="tag p${pr}">${pr==='긴급'?'🚨 ':''}${esc(pr)}</span> <span class="muted">${gl.length}곳 · ${STATUSES.filter(gc).map(st=>st+' '+gc(st)).join(' · ')}</span></div>` : '';
+      return head+`<div class="srow ${isDone(s)?'done':''} ${pr==='긴급'?'urgent':''}" data-id="${s.id}">
         <div class="sl">
-          <div class="sname">${esc(s.name)} <span class="tag ${typeCls(s.type)}">${esc(s.type||'자체투자')}</span> <span class="tag ${esc(s.status||'진행')}">${esc(s.status||'진행')}</span></div>
+          <div class="sname">${pr!=='보통'?`<span class="tag p${pr}">${esc(pr)}</span>`:''}${esc(s.name)} <span class="tag ${typeCls(s.type)}">${esc(s.type||'자체투자')}</span> <span class="tag ${esc(s.status||'진행')}">${esc(s.status||'진행')}</span></div>
           <div class="smeta">${esc(s.code)} · ${esc(s.region||'-')}${num(s.parking)>0?' · 주차 '+num(s.parking).toLocaleString()+'면':''}${num(s.otherQty)>0?' · 타사 '+num(s.otherQty)+'기':''}</div>
           <div class="sinfo">${siteInfo(s)}</div>
           ${instText(s)?`<div class="sinfo">🔋 ${esc(instText(s))}</div>`:''}
@@ -704,6 +708,8 @@ $('#addSite').onclick=()=>{
       <div class="f" style="grid-column:1/3"><label>단지명</label><input id="nName" placeholder="예: OO마을 1단지"></div>
       <div class="f"><label>지역</label><input id="nRegion"></div>
       <div class="f"><label>유형</label><select id="nType">${TYPES.map(t=>`<option>${t}</option>`).join('')}</select></div>
+      <div class="f"><label>우선순위</label><select id="nPrio">${PRIOS.map(t=>`<option ${t==='보통'?'selected':''}>${t}</option>`).join('')}</select></div>
+      <div></div>
       <div class="f" style="grid-column:1/3"><label>배경</label><textarea id="nBg" rows="3" placeholder="예: 관리소장 요청으로 제안, 기존 타사 계약 만료 예정 등"></textarea></div>
       <div class="f" style="grid-column:1/3"><label>진행사항</label><textarea id="nProg" rows="3" placeholder="현재까지 진행된 내용"></textarea></div>
       <div class="f" style="grid-column:1/3;margin-bottom:-4px"><label>충전기 설치 현황</label></div>
@@ -718,7 +724,7 @@ $('#addSite').onclick=()=>{
   $('#closeBtn').onclick=()=>closePanel(); $('#nName').focus();
   $('#nCreate').onclick=async()=>{
     const name=$('#nName').value.trim(); if(!name){ toast('단지명을 입력하세요'); return; }
-    const s=normalize({id:uid(),code:nextCode(),name,region:$('#nRegion').value.trim(),type:$('#nType').value,parking:'',address:'',ourLoc:'',otherQty:'',otherLoc:'',contact:'',memo:'',background:$('#nBg').value.trim(),progressNote:$('#nProg').value.trim(),instF100:$('#nF100').value,instF50:$('#nF50').value,instSlow:$('#nSlow').value,points:[{name:'1거점',qty:'',supply:'모자분리',insp:false,safe:true}]});
+    const s=normalize({id:uid(),code:nextCode(),name,region:$('#nRegion').value.trim(),type:$('#nType').value,parking:'',address:'',ourLoc:'',otherQty:'',otherLoc:'',contact:'',memo:'',priority:$('#nPrio').value,background:$('#nBg').value.trim(),progressNote:$('#nProg').value.trim(),instF100:$('#nF100').value,instF50:$('#nF50').value,instSlow:$('#nSlow').value,points:[{name:'1거점',qty:'',supply:'모자분리',insp:false,safe:true}]});
     try{ await saveSite(s); }catch(e){ toast('저장 실패: '+(e.code||e.message)); return; }
     editing=s; tab='flow'; drawPanel();
   };
@@ -840,7 +846,7 @@ function drawInfo(){
       ${fld('관리소 연락처','contact')}
       <div class="f"><label>상태</label><select data-k="status">${STATUSES.map(x=>`<option ${s.status===x?'selected':''}>${x}</option>`).join('')}</select></div>
       ${fld('타사 설치 기수','otherQty','number')}
-      <div></div>
+      <div class="f"><label>우선순위</label><select data-k="priority">${PRIOS.map(x=>`<option ${prioOf(s)===x?'selected':''}>${x}</option>`).join('')}</select></div>
       ${ta('당사 설치 위치','ourLoc','예: 지하 1층 101동 앞, 지상 주차장 입구')}
       ${ta('타사 설치 위치','otherLoc','예: 지하 2층 105동 (OO사 7kW 10기)')}
       <div class="f" style="grid-column:1/-1;margin-bottom:-4px"><label><b>충전기 설치 현황</b></label></div>
