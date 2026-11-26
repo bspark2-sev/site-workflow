@@ -632,11 +632,12 @@ function renderSites(){
   const draw=()=>{
     const q=filt.q.trim().toLowerCase();
     const list=sites.filter(s=>(!q||(s.name||'').toLowerCase().includes(q))&&(!filt.regions.length||filt.regions.includes(regionOf(s)))&&(!filt.status||(s.status||'진행')===filt.status)&&(!filt.type||s.type===filt.type))
-      .sort((a,b)=>(STATUSES.indexOf(a.status||'진행')-STATUSES.indexOf(b.status||'진행'))||(a.code||'').localeCompare(b.code||''));
+      .sort((a,b)=>{ const ra=regionOf(a), rb=regionOf(b); return ((ra==='미지정')-(rb==='미지정'))||ra.localeCompare(rb,'ko')||(STATUSES.indexOf(a.status||'진행')-STATUSES.indexOf(b.status||'진행'))||(a.code||'').localeCompare(b.code||''); });
     $('#fcount').textContent=`${list.length}곳`;
     $('#tb').innerHTML = list.length===0 ? `<div class="empty card">${sites.length?'조건에 맞는 현장이 없습니다.':'등록된 현장이 없습니다. “+ 현장 추가”를 눌러주세요.'}</div>` :
-    list.map((s,i)=>{ const r=calc(s), p=progress(s), note=(s.stepNotes||{})[s.stepId]||'', st=s.status||'진행';
-      const head = (i===0||(list[i-1].status||'진행')!==st) ? `<div class="sgrp"><span class="tag ${esc(st)}">${esc(st)}</span><span class="muted">${list.filter(x=>(x.status||'진행')===st).length}곳</span></div>` : '';
+    list.map((s,i)=>{ const r=calc(s), p=progress(s), note=(s.stepNotes||{})[s.stepId]||'', rg=regionOf(s);
+      const gl=list.filter(x=>regionOf(x)===rg), gc=st=>gl.filter(x=>(x.status||'진행')===st).length;
+      const head = (i===0||regionOf(list[i-1])!==rg) ? `<div class="sgrp">📍 ${esc(rg)} <span class="muted">${gl.length}곳 · ${STATUSES.filter(gc).map(st=>st+' '+gc(st)).join(' · ')}</span></div>` : '';
       return head+`<div class="srow ${isDone(s)?'done':''}" data-id="${s.id}">
         <div class="sl">
           <div class="sname">${esc(s.name)} <span class="tag ${typeCls(s.type)}">${esc(s.type||'자체투자')}</span> <span class="tag ${esc(s.status||'진행')}">${esc(s.status||'진행')}</span></div>
