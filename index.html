@@ -63,6 +63,8 @@ td.num,th.num{text-align:right}
 .bar i{display:block;height:100%;background:var(--acc)}
 .tag{display:inline-block;padding:1px 8px;border-radius:10px;font-size:11px;font-weight:500;background:var(--gray);color:var(--ink2)}
 .tag.p중요{background:#fde8e8;color:var(--red);font-weight:700}.tag.p낮음{background:var(--gray);color:var(--ink3)}
+.psel{font-size:11px;padding:1px 4px;border-radius:10px;border:1px solid var(--line);background:#fff;color:var(--ink2);cursor:pointer;font-weight:500;height:auto;width:auto}
+.psel.p중요{background:#fde8e8;color:var(--red);border-color:#f3b4b4;font-weight:700}.psel.p낮음{color:var(--ink3)}
 .srow.urgent{border-color:#f3b4b4;border-left:4px solid var(--red)}
 .tag.env{background:var(--grnl);color:var(--grn)}.tag.self{background:var(--accl);color:var(--acc)}
 .tag.rm{background:var(--orgl);color:var(--org)}.tag.진행{background:var(--accl);color:var(--acc)}.tag.개통{background:var(--grnl);color:var(--grn)}.tag.철거{background:var(--orgl);color:var(--org)}.tag.보류{background:var(--gray);color:var(--ink2)}
@@ -644,7 +646,7 @@ function renderSites(){
       const head = (i===0||prioOf(list[i-1])!==pr) ? `<div class="sgrp"><span class="tag p${pr}">${pr==='중요'?'🚨 ':''}${esc(pr)}</span> <span class="muted">${gl.length}곳 · ${STATUSES.filter(gc).map(st=>st+' '+gc(st)).join(' · ')}</span></div>` : '';
       return head+`<div class="srow ${isDone(s)?'done':''} ${pr==='중요'?'urgent':''}" data-id="${s.id}">
         <div class="sl">
-          <div class="sname">${pr!=='보통'?`<span class="tag p${pr}">${esc(pr)}</span>`:''}${esc(s.name)} <span class="tag ${typeCls(s.type)}">${esc(s.type||'자체투자')}</span> <span class="tag ${esc(s.status||'진행')}">${esc(s.status||'진행')}</span></div>
+          <div class="sname"><select class="psel p${pr}" data-prio="${s.id}" title="우선순위">${PRIOS.map(x=>`<option ${x===pr?'selected':''}>${x}</option>`).join('')}</select>${esc(s.name)} <span class="tag ${typeCls(s.type)}">${esc(s.type||'자체투자')}</span> <span class="tag ${esc(s.status||'진행')}">${esc(s.status||'진행')}</span></div>
           <div class="smeta">${esc(s.code)} · ${esc(s.region||'-')}${num(s.parking)>0?' · 주차 '+num(s.parking).toLocaleString()+'면':''}${num(s.otherQty)>0?' · 타사 '+num(s.otherQty)+'기':''}</div>
           <div class="sinfo">${siteInfo(s)}</div>
           ${instText(s)?`<div class="sinfo">🔋 ${esc(instText(s))}</div>`:''}
@@ -662,6 +664,9 @@ function renderSites(){
         </div>`}
       </div>`;}).join('');
     bindOpen();
+    document.querySelectorAll('[data-prio]').forEach(el=>{ el.onclick=e=>e.stopPropagation();
+      el.onchange=async()=>{ const site=sites.find(x=>x.id===el.dataset.prio); if(!site) return; site.priority=el.value;
+        try{ await saveSite(site); toast(`우선순위: ${el.value}`); }catch(e){ toast('저장 실패: '+(e.code||e.message)); } draw(); }; });
     document.querySelectorAll('[data-notes]').forEach(b=>b.onclick=e=>{ e.stopPropagation(); const id=b.dataset.notes; openNotes.has(id)?openNotes.delete(id):openNotes.add(id); draw(); });
   };
   $('#fq').oninput=e=>{filt.q=e.target.value;draw();};
