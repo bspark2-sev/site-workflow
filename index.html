@@ -118,7 +118,7 @@ textarea.json{width:100%;height:140px;font-family:monospace;font-size:11px;borde
 .chk input{width:18px;height:18px;accent-color:var(--grn)}.chk.on{background:var(--grnl);border-color:#bfe0c1}.chk.on span{color:var(--grn);text-decoration:line-through}
 .btn:disabled{opacity:.45;cursor:not-allowed}
 .slist{display:flex;flex-direction:column;gap:10px}
-.srow{background:#fff;border:1px solid var(--line);border-radius:10px;padding:16px 18px;display:grid;grid-template-columns:minmax(230px,.8fr) 3fr 130px;gap:20px;align-items:center;cursor:pointer;min-height:110px}
+.srow{background:#fff;border:1px solid var(--line);border-radius:10px;padding:16px 18px;display:grid;grid-template-columns:minmax(230px,.8fr) 3fr 130px;gap:20px;align-items:start;cursor:pointer;min-height:110px}
 .srow:hover{border-color:var(--acc);box-shadow:0 2px 10px rgba(31,79,216,.07)}
 .srow.done{opacity:.6}
 .sname{font-size:16px;font-weight:700;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
@@ -136,6 +136,7 @@ textarea.json{width:100%;height:140px;font-family:monospace;font-size:11px;borde
 .sn{display:flex;gap:10px;line-height:1.75;min-width:0}.snk{color:var(--acc);font-weight:700;white-space:nowrap;flex:none;min-width:150px}
 .snv{color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .snotes.open .snv{white-space:pre-wrap}
+.snotes.sbg{background:#eef3ff}.snotes.sbg .snk{color:var(--ink)}
 .snote{font-size:12px;color:var(--ink2);margin-top:8px;background:#f7f8fb;border-radius:6px;padding:5px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sr{text-align:right}.sval{font-size:20px;font-weight:700;color:var(--acc);margin:2px 0}.sval small{font-size:12px;margin-left:2px;color:var(--ink2);font-weight:500}
 @media(max-width:1000px){.srow{grid-template-columns:1fr}.sr{text-align:left}}
@@ -586,6 +587,11 @@ function siteInfo(s){
   return parts.join('<span class="sep">|</span>') || '<span class="muted">투자비 탭에서 충전기 정보를 입력하세요</span>';
 }
 function instText(s){ const a=[['급속 100kW',s.instF100],['급속 50kW',s.instF50],['완속',s.instSlow]].filter(([,v])=>num(v)>0).map(([l,v])=>`${l} ${num(v)}기`); return a.join(' · '); }
+function bgHtml(s){
+  const rows=[['배경',s.background],['진행사항',s.progressNote]].filter(([,v])=>(v||'').trim());
+  if(!rows.length) return '';
+  return `<div class="snotes open sbg">${rows.map(([k,v])=>`<div class="sn"><span class="snk">${k}</span><span class="snv">${esc(v.trim())}</span></div>`).join('')}</div>`;
+}
 const openNotes=new Set();
 function notesHtml(s){
   const f=flowFor(s.type,s), notes=f.filter(st=>((s.stepNotes||{})[st.id]||'').trim()).map(st=>({st,t:s.stepNotes[st.id].trim()})).reverse();
@@ -617,12 +623,11 @@ function renderSites(){
           <div class="smeta">${esc(s.code)} · ${esc(s.region||'-')}${num(s.parking)>0?' · 주차 '+num(s.parking).toLocaleString()+'면':''}${num(s.otherQty)>0?' · 타사 '+num(s.otherQty)+'기':''}</div>
           <div class="sinfo">${siteInfo(s)}</div>
           ${instText(s)?`<div class="sinfo">🔋 ${esc(instText(s))}</div>`:''}
-          ${(s.background||'').trim()?`<div class="snote" title="${esc(s.background)}"><b>배경</b> ${esc(s.background.replace(/\s*\n\s*/g,' / '))}</div>`:''}
-          ${(s.progressNote||'').trim()?`<div class="snote" title="${esc(s.progressNote)}"><b>진행사항</b> ${esc(s.progressNote.replace(/\s*\n\s*/g,' / '))}</div>`:''}
         </div>
         <div class="sm">
           <div class="scur"><b>${isDone(s)?doneLabel(s):esc(stepName(s.stepId)||'-')}</b> <span class="muted">${Math.round(p*100)}% · 최근 진행 ${ddayHtml(s)}</span></div>
           ${miniFlow(s)}
+          ${bgHtml(s)}
           ${notesHtml(s)}
         </div>
         ${s.type==='철거'?`<div class="sr"><div class="muted">협의 결과</div><div class="sval" style="color:var(--org)">${esc(s.branch||'대기')}</div><div class="muted">${s.branch==='유지'&&(s.keep||{}).qty?esc(s.keep.qty)+'기 유지':''}</div></div>`:`<div class="sr">
