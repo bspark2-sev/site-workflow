@@ -339,11 +339,16 @@ function chargerKw(id){
   const p=cfg.prices.find(x=>x.id===id); if(!p) return 7;
   if(p.kw) return num(p.kw); const m=String(p.model).match(/(\d+(?:\.\d+)?)\s*kW/i); return m?parseFloat(m[1]):7;
 }
-function pointKw(site,p){ return (p.qty!==undefined && p.qty!=='') ? num(p.qty)*chargerKw((site.invest||{}).chargerModel) : Math.max(num(p.kw),0); }
+const ETC='__etc';
+function siteKw(site){ const inv=site.invest||{}; if(inv.chargerModel!==ETC) return chargerKw(inv.chargerModel);
+  if(num(inv.etcKw)>0) return num(inv.etcKw); const m=String(inv.etcModel||'').match(/(\d+(?:\.\d+)?)\s*kW/i); return m?parseFloat(m[1]):7; }
+function chargerPrice(inv){ return inv.chargerModel===ETC ? num(inv.etcPrice) : priceOf(inv.chargerModel); }
+function chargerName(inv){ if(inv.chargerModel===ETC) return (inv.etcModel||'').trim()||'기타 충전기'; const p=cfg.prices.find(x=>x.id===inv.chargerModel); return p?p.model:''; }
+function pointKw(site,p){ return (p.qty!==undefined && p.qty!=='') ? num(p.qty)*siteKw(site) : Math.max(num(p.kw),0); }
 function calc(site){
   const c=cfg.calc, inv=site.invest||{};
   const qty=num(inv.chargerQty);
-  const charger = qty*priceOf(inv.chargerModel);
+  const charger = qty*chargerPrice(inv);
   const stand = num(inv.poleQty)*priceOf(inv.poleModel) + num(inv.helmetQty)*priceOf(inv.helmetModel) + num(inv.hpoleQty)*priceOf(inv.hpoleModel);
   const canopy = num(inv.canopy);
   const elec = (site.elec||[]).reduce((s,e)=>s+num(e.qty)*num(e.price),0);
@@ -580,7 +585,7 @@ function siteInfo(s){
     if(s.branch==='유지'){ if(k.qty) parts.push(`${esc(k.qty)}기 유지`); if(k.years) parts.push(`${esc(k.years)}년`); if(k.auto) parts.push(`자동연장 ${esc(k.auto)}`); }
     return parts.join('<span class="sep">|</span>'); }
   const inv=s.invest||{}, P=id=>cfg.prices.find(x=>x.id===id), r=calc(s), parts=[];
-  if(P(inv.chargerModel)) parts.push(`🔌 ${esc(P(inv.chargerModel).model)} × ${num(inv.chargerQty)}기`);
+  if(chargerName(inv)) parts.push(`🔌 ${esc(chargerName(inv))} × ${num(inv.chargerQty)}기`);
   const st=[['poleModel','poleQty'],['helmetModel','helmetQty'],['hpoleModel','hpoleQty']].filter(([m,q])=>P(inv[m])&&num(inv[q])).map(([m,q])=>`${P(inv[m]).type} ${num(inv[q])}`);
   if(st.length) parts.push('🪵 '+st.join(' · '));
   if((s.points||[]).length) parts.push(`⚡ 거점 ${s.points.length}곳 · ${Math.round(r.kwTot*10)/10}kW`);
@@ -848,13 +853,19 @@ function drawInfo(){
 /* ---- 투자비 탭 ---- */
 function drawCost(){
   const s=editing, inv=s.invest;
-  const irow=(label,mk,qk)=>`<tr><td>${label}</td><td><select data-i="${mk}">${priceOpts(label,inv[mk])}</select></td><td><input type="number" data-i="${qk}" value="${esc(inv[qk])}"></td><td class="num" data-amt="${mk}"></td></tr>`;
+  const irow=(label,mk,qk)=>`<tr><td>${label}</td><td><select data-i="${mk}">${priceOpts(label,inv[mk])}${mk==='chargerModel'?`<option value="${ETC}" ${inv[mk]===ETC?'selected':''}>기타 (직접 입력)</option>`:''}</select></td><td><input type="number" data-i="${qk}" value="${esc(inv[qk])}"></td><td class="num" data-amt="${mk}"></td></tr>`;
   $('#tabBody').innerHTML=`
   <div class="two" style="grid-template-columns:1fr 300px">
     <div class="card">
       <div class="sub" style="margin-top:0">충전기 · 스탠드</div>
       <table class="mini"><thead><tr><th>구분</th><th>모델</th><th style="width:70px">수량</th><th class="num">금액</th></tr></thead><tbody>
-        ${irow('충전기','chargerModel','chargerQty')}${irow('스탠드폴','poleModel','poleQty')}${irow('헬멧','helmetModel','helmetQty')}${irow('헬멧형 스탠드폴','hpoleModel','hpoleQty')}
+        ${irow('충전기','chargerModel','chargerQty')}
+        ${inv.chargerModel===ETC?`<tr class="etcrow"><td class="muted">└ 기타</td><td colspan="3"><div style="display:flex;gap:6px;flex-wrap:wrap">
+          <input data-i="etcModel" value="${esc(inv.etcModel||'')}" placeholder="모델명 (예: OO사 11kW 스마트)" style="flex:2;min-width:160px">
+          <input type="number" min="0" data-i="etcPrice" value="${esc(inv.etcPrice||'')}" placeholder="단가(원)" style="flex:1;min-width:90px">
+          <input type="number" min="0" step="0.1" data-i="etcKw" value="${esc(inv.etcKw||'')}" placeholder="kW (기본 7)" style="flex:1;min-width:80px" title="법정비용 계산용 용량. 비우면 모델명의 kW 또는 7kW">
+        </div></td></tr>`:''}
+        ${irow('스탠드폴','poleModel','poleQty')}${irow('헬멧','helmetModel','helmetQty')}${irow('헬멧형 스탠드폴','hpoleModel','hpoleQty')}
         <tr><td>캐노피</td><td colspan="2"><input data-i="canopy" value="${esc(inv.canopy)}" placeholder="금액(원)"></td><td class="num" data-amt="canopy"></td></tr>
       </tbody></table>
       <div class="sub">거점 (계약전력·법정비용) <button class="btn sm" id="addPt">+ 거점</button> <span id="ptWarn" style="color:var(--org);font-weight:500;font-size:12px"></span></div>
@@ -866,7 +877,7 @@ function drawCost(){
     <div><div class="sum" id="sumBox" style="position:sticky;top:0"></div><div class="muted" style="margin-top:6px">부가세 별도 · EVCS-Simul 공사비 기준</div></div>
   </div>`;
   drawPoints(); drawElec(); drawSum();
-  document.querySelectorAll('[data-i]').forEach(el=>el.addEventListener(el.tagName==='SELECT'?'change':'input',()=>{ let v=el.value; if(el.type==='number'&&num(v)<0){v='0';el.value='0';} inv[el.dataset.i]=v; queueSave(); drawSum(); }));
+  document.querySelectorAll('[data-i]').forEach(el=>el.addEventListener(el.tagName==='SELECT'?'change':'input',()=>{ let v=el.value; if(el.type==='number'&&num(v)<0){v='0';el.value='0';} inv[el.dataset.i]=v; queueSave(); if(el.dataset.i==='chargerModel'){ drawCost(); return; } drawSum(); }));
   $('#supvChk').onchange=e=>{ inv.supv=e.target.checked; queueSave(); drawSum(); };
   $('#addPt').onclick=()=>{ s.points.push({name:(s.points.length+1)+'거점',qty:'',supply:'모자분리',insp:false,safe:true}); queueSave(); drawPoints(); drawSum(); };
   $('#addEl').onclick=()=>{ s.elec.push({name:'',qty:1,unit:'식',price:''}); queueSave(); drawElec(); drawSum(); };
@@ -876,7 +887,7 @@ function drawPoints(){
   $('#ptBody').innerHTML = s.points.length===0?'<tr><td colspan="8" class="muted">거점을 추가하세요</td></tr>':
   s.points.map((p,i)=>`<tr>
     <td><input data-p="${i}" data-f="name" value="${esc(p.name)}"></td>
-    <td><input type="number" min="0" data-p="${i}" data-f="qty" value="${esc(p.qty!==undefined?p.qty:(p.kw?Math.round(num(p.kw)/chargerKw(s.invest.chargerModel)):''))}" placeholder="기"></td>
+    <td><input type="number" min="0" data-p="${i}" data-f="qty" value="${esc(p.qty!==undefined?p.qty:(p.kw?Math.round(num(p.kw)/siteKw(s)):''))}" placeholder="기"></td>
     <td class="num" data-ptkw="${i}"></td>
     <td><select data-p="${i}" data-f="supply">${SUPPLY.map(x=>`<option ${p.supply===x?'selected':''}>${x}</option>`).join('')}</select></td>
     <td style="text-align:center"><input type="checkbox" data-p="${i}" data-f="insp" ${p.insp!==false?'checked':''} style="width:auto"></td>
