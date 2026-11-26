@@ -62,7 +62,7 @@ td.num,th.num{text-align:right}
 .bar{width:90px;height:7px;background:var(--gray);border-radius:4px;overflow:hidden;display:inline-block;vertical-align:middle;margin-right:6px}
 .bar i{display:block;height:100%;background:var(--acc)}
 .tag{display:inline-block;padding:1px 8px;border-radius:10px;font-size:11px;font-weight:500;background:var(--gray);color:var(--ink2)}
-.tag.p긴급{background:#fde8e8;color:var(--red);font-weight:700}.tag.p높음{background:var(--orgl);color:var(--org)}.tag.p낮음{background:var(--gray);color:var(--ink3)}
+.tag.p중요{background:#fde8e8;color:var(--red);font-weight:700}.tag.p낮음{background:var(--gray);color:var(--ink3)}
 .srow.urgent{border-color:#f3b4b4;border-left:4px solid var(--red)}
 .tag.env{background:var(--grnl);color:var(--grn)}.tag.self{background:var(--accl);color:var(--acc)}
 .tag.rm{background:var(--orgl);color:var(--org)}.tag.진행{background:var(--accl);color:var(--acc)}.tag.개통{background:var(--grnl);color:var(--grn)}.tag.철거{background:var(--orgl);color:var(--org)}.tag.보류{background:var(--gray);color:var(--ink2)}
@@ -298,8 +298,8 @@ const DEFAULT_CONFIG = {
 };
 const STATUSES=['진행','보류','개통','철거'];
 const TYPES=['자체투자','환경부','철거'];
-const PRIOS=['긴급','높음','보통','낮음'];
-const prioOf=s=>PRIOS.includes(s.priority)?s.priority:'보통';
+const PRIOS=['중요','보통','낮음'];
+const prioOf=s=>(s.priority==='긴급'||s.priority==='높음')?'중요':(PRIOS.includes(s.priority)?s.priority:'보통');
 const isDone=s=>s.status==='개통'||s.status==='철거';
 const typeCls=t=>t==='환경부'?'env':(t==='철거'?'rm':'self');
 function doneLabel(s){ if(s.status==='철거') return '철거 완료'; return s.type==='철거' ? '유지 확정' : '개통 완료'; }
@@ -641,8 +641,8 @@ function renderSites(){
     $('#tb').innerHTML = list.length===0 ? `<div class="empty card">${sites.length?'조건에 맞는 현장이 없습니다.':'등록된 현장이 없습니다. “+ 현장 추가”를 눌러주세요.'}</div>` :
     list.map((s,i)=>{ const r=calc(s), p=progress(s), note=(s.stepNotes||{})[s.stepId]||'', pr=prioOf(s);
       const gl=list.filter(x=>prioOf(x)===pr), gc=st=>gl.filter(x=>(x.status||'진행')===st).length;
-      const head = (i===0||prioOf(list[i-1])!==pr) ? `<div class="sgrp"><span class="tag p${pr}">${pr==='긴급'?'🚨 ':''}${esc(pr)}</span> <span class="muted">${gl.length}곳 · ${STATUSES.filter(gc).map(st=>st+' '+gc(st)).join(' · ')}</span></div>` : '';
-      return head+`<div class="srow ${isDone(s)?'done':''} ${pr==='긴급'?'urgent':''}" data-id="${s.id}">
+      const head = (i===0||prioOf(list[i-1])!==pr) ? `<div class="sgrp"><span class="tag p${pr}">${pr==='중요'?'🚨 ':''}${esc(pr)}</span> <span class="muted">${gl.length}곳 · ${STATUSES.filter(gc).map(st=>st+' '+gc(st)).join(' · ')}</span></div>` : '';
+      return head+`<div class="srow ${isDone(s)?'done':''} ${pr==='중요'?'urgent':''}" data-id="${s.id}">
         <div class="sl">
           <div class="sname">${pr!=='보통'?`<span class="tag p${pr}">${esc(pr)}</span>`:''}${esc(s.name)} <span class="tag ${typeCls(s.type)}">${esc(s.type||'자체투자')}</span> <span class="tag ${esc(s.status||'진행')}">${esc(s.status||'진행')}</span></div>
           <div class="smeta">${esc(s.code)} · ${esc(s.region||'-')}${num(s.parking)>0?' · 주차 '+num(s.parking).toLocaleString()+'면':''}${num(s.otherQty)>0?' · 타사 '+num(s.otherQty)+'기':''}</div>
