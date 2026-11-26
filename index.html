@@ -229,7 +229,7 @@ const DEFAULT_CONFIG = {
     {id:'b3',name:'운영계약서 초안 발송',task:'BDM 발송',check:'운영계약서 초안 발송'},
     {id:'b12',name:'운영계약서 검토 및 날인',task:'',check:'운영계약서 검토 및 날인'},
     {id:'b4',name:'시공사 견적',task:'견적 검토',check:'시공사 실사 및 견적 확인'},
-    {id:'b5',name:'충전기 OPEN 기안',task:'기안 작성',check:'기안 상신'},
+    {id:'b5',name:'충전기 OPEN 또는 수정 기안',task:'기안 작성',check:'기안 상신'},
     {id:'b13',name:'기안 결재완료',task:'',check:'기안 결재완료 확인'},
     {id:'b6',name:'행위신고 및 행위허가',task:'',check:'행위신고 및 행위허가 일정 확인'},
     {id:'b7',name:'공사일정 확인',task:'',check:'공사일정 확인'},
@@ -387,6 +387,7 @@ function migrateSite(s){ if(s.status==='완료') s.status='개통'; if(s.status=
 function mergeCfg(c){
   if(c&&c.calc&&Array.isArray(c.calc.supv)&&c.calc.supv.length&&!Array.isArray(c.calc.supv[0])){ c=JSON.parse(JSON.stringify(c)); c.calc.supv=c.calc.supv.map(o=>[o.lim??null,o.amt]); }
   if(c && (c.version||1)<DEFAULT_CONFIG.version){ c=Object.assign({},c,{version:DEFAULT_CONFIG.version,baseSteps:DEFAULT_CONFIG.baseSteps,envSteps:DEFAULT_CONFIG.envSteps,envOrder:DEFAULT_CONFIG.envOrder}); }
+  if(c&&Array.isArray(c.baseSteps)){ const b5=c.baseSteps.find(x=>x.id==='b5'); if(b5&&b5.name==='충전기 OPEN 기안'){ c=JSON.parse(JSON.stringify(c)); c.baseSteps.find(x=>x.id==='b5').name='충전기 OPEN 또는 수정 기안'; } }
   return Object.assign(JSON.parse(JSON.stringify(DEFAULT_CONFIG)), c||{}, {calc:Object.assign({},DEFAULT_CONFIG.calc,(c||{}).calc||{})}); }
 
 async function saveSite(site){
