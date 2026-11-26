@@ -638,7 +638,7 @@ function renderSites(){
           ${bgHtml(s)}
           ${notesHtml(s)}
         </div>
-        ${s.type==='철거'?`<div class="sr"><div class="muted">협의 결과</div><div class="sval" style="color:var(--org)">${esc(s.branch||'대기')}</div><div class="muted">${s.branch==='유지'&&(s.keep||{}).qty?esc(s.keep.qty)+'기 유지':''}</div></div>`:`<div class="sr">
+        ${s.type==='철거'?`<div class="sr"><div class="muted">협의 결과</div><div class="sval" style="color:var(--org)">${esc(s.branch||'대기')}</div><div class="muted">${s.branch==='유지'&&(s.keep||{}).qty?esc(s.keep.qty)+'기 유지':''}</div>${r.net>0?`<div class="muted" style="margin-top:6px">투자비</div><div style="font-weight:700;color:var(--acc)">${won(r.net)}<small class="muted">원</small></div>${r.perUnit?`<div class="muted">기당 ${won(r.perUnit)}원</div>`:''}`:''}</div>`:`<div class="sr">
           <div class="muted">기당 투자비</div>
           <div class="sval">${r.perUnit?won(r.perUnit):'-'}<small>${r.perUnit?'원':''}</small></div>
           <div class="muted">${r.qty?r.qty+'기':''}${s.type==='환경부'&&r.subsidy?' · 보조금 반영':''}</div>
@@ -738,13 +738,12 @@ function drawPanel(){
   </div>
   <div class="tabs">
     <button class="tab ${tab==='flow'?'on':''}" data-tab="flow">진행</button>
-    ${s.type==='철거'?'':`<button class="tab ${tab==='cost'?'on':''}" data-tab="cost">투자비</button>`}
+    <button class="tab ${tab==='cost'?'on':''}" data-tab="cost">투자비</button>
     <button class="tab ${tab==='info'?'on':''}" data-tab="info">현장 정보</button>
   </div>
   <div class="pbody" id="tabBody"></div>`;
   $('#closeBtn').onclick=()=>closePanel();
   document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{ tab=b.dataset.tab; drawPanel(); });
-  if(tab==='cost'&&s.type==='철거') tab='flow';
   if(tab==='flow') drawFlow(); else if(tab==='cost') drawCost(); else drawInfo();
 }
 
