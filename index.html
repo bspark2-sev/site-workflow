@@ -585,6 +585,7 @@ function siteInfo(s){
   if((s.points||[]).length) parts.push(`⚡ 거점 ${s.points.length}곳 · ${Math.round(r.kwTot*10)/10}kW`);
   return parts.join('<span class="sep">|</span>') || '<span class="muted">투자비 탭에서 충전기 정보를 입력하세요</span>';
 }
+function instText(s){ const a=[['급속 100kW',s.instF100],['급속 50kW',s.instF50],['완속',s.instSlow]].filter(([,v])=>num(v)>0).map(([l,v])=>`${l} ${num(v)}기`); return a.join(' · '); }
 const openNotes=new Set();
 function notesHtml(s){
   const f=flowFor(s.type,s), notes=f.filter(st=>((s.stepNotes||{})[st.id]||'').trim()).map(st=>({st,t:s.stepNotes[st.id].trim()})).reverse();
@@ -615,6 +616,9 @@ function renderSites(){
           <div class="sname">${esc(s.name)} <span class="tag ${typeCls(s.type)}">${esc(s.type||'자체투자')}</span> <span class="tag ${esc(s.status||'진행')}">${esc(s.status||'진행')}</span></div>
           <div class="smeta">${esc(s.code)} · ${esc(s.region||'-')}${num(s.parking)>0?' · 주차 '+num(s.parking).toLocaleString()+'면':''}${num(s.otherQty)>0?' · 타사 '+num(s.otherQty)+'기':''}</div>
           <div class="sinfo">${siteInfo(s)}</div>
+          ${instText(s)?`<div class="sinfo">🔋 ${esc(instText(s))}</div>`:''}
+          ${(s.background||'').trim()?`<div class="snote" title="${esc(s.background)}"><b>배경</b> ${esc(s.background.replace(/\s*\n\s*/g,' / '))}</div>`:''}
+          ${(s.progressNote||'').trim()?`<div class="snote" title="${esc(s.progressNote)}"><b>진행사항</b> ${esc(s.progressNote.replace(/\s*\n\s*/g,' / '))}</div>`:''}
         </div>
         <div class="sm">
           <div class="scur"><b>${isDone(s)?doneLabel(s):esc(stepName(s.stepId)||'-')}</b> <span class="muted">${Math.round(p*100)}% · 최근 진행 ${ddayHtml(s)}</span></div>
@@ -674,13 +678,21 @@ $('#addSite').onclick=()=>{
       <div class="f" style="grid-column:1/3"><label>단지명</label><input id="nName" placeholder="예: OO마을 1단지"></div>
       <div class="f"><label>지역</label><input id="nRegion"></div>
       <div class="f"><label>유형</label><select id="nType">${TYPES.map(t=>`<option>${t}</option>`).join('')}</select></div>
+      <div class="f" style="grid-column:1/3"><label>배경</label><textarea id="nBg" rows="3" placeholder="예: 관리소장 요청으로 제안, 기존 타사 계약 만료 예정 등"></textarea></div>
+      <div class="f" style="grid-column:1/3"><label>진행사항</label><textarea id="nProg" rows="3" placeholder="현재까지 진행된 내용"></textarea></div>
+      <div class="f" style="grid-column:1/3;margin-bottom:-4px"><label>충전기 설치 현황</label></div>
+    </div>
+    <div class="grid" style="grid-template-columns:repeat(3,minmax(0,1fr));margin-top:4px">
+      <div class="f"><label>급속 100kW (기)</label><input type="number" min="0" id="nF100" placeholder="0"></div>
+      <div class="f"><label>급속 50kW (기)</label><input type="number" min="0" id="nF50" placeholder="0"></div>
+      <div class="f"><label>완속 (기)</label><input type="number" min="0" id="nSlow" placeholder="0"></div>
     </div>
     <div style="margin-top:14px"><button class="btn pri" id="nCreate">만들기</button></div>
   </div></div>`;
   $('#closeBtn').onclick=()=>closePanel(); $('#nName').focus();
   $('#nCreate').onclick=async()=>{
     const name=$('#nName').value.trim(); if(!name){ toast('단지명을 입력하세요'); return; }
-    const s=normalize({id:uid(),code:nextCode(),name,region:$('#nRegion').value.trim(),type:$('#nType').value,parking:'',address:'',ourLoc:'',otherQty:'',otherLoc:'',contact:'',memo:'',points:[{name:'1거점',qty:'',supply:'모자분리',insp:false,safe:true}]});
+    const s=normalize({id:uid(),code:nextCode(),name,region:$('#nRegion').value.trim(),type:$('#nType').value,parking:'',address:'',ourLoc:'',otherQty:'',otherLoc:'',contact:'',memo:'',background:$('#nBg').value.trim(),progressNote:$('#nProg').value.trim(),instF100:$('#nF100').value,instF50:$('#nF50').value,instSlow:$('#nSlow').value,points:[{name:'1거점',qty:'',supply:'모자분리',insp:false,safe:true}]});
     try{ await saveSite(s); }catch(e){ toast('저장 실패: '+(e.code||e.message)); return; }
     editing=s; tab='flow'; drawPanel();
   };
@@ -806,6 +818,11 @@ function drawInfo(){
       <div></div>
       ${ta('당사 설치 위치','ourLoc','예: 지하 1층 101동 앞, 지상 주차장 입구')}
       ${ta('타사 설치 위치','otherLoc','예: 지하 2층 105동 (OO사 7kW 10기)')}
+      <div class="f" style="grid-column:1/-1;margin-bottom:-4px"><label><b>충전기 설치 현황</b></label></div>
+      ${fld('급속 100kW (기)','instF100','number')}${fld('급속 50kW (기)','instF50','number')}${fld('완속 (기)','instSlow','number')}
+      <div></div>
+      <div class="f" style="grid-column:1/-1"><label>배경</label><textarea data-k="background" rows="3">${esc(s.background||'')}</textarea></div>
+      <div class="f" style="grid-column:1/-1"><label>진행사항</label><textarea data-k="progressNote" rows="3">${esc(s.progressNote||'')}</textarea></div>
     </div>
     <div class="f" style="margin-top:10px"><label>메모</label><textarea data-k="memo" rows="4">${esc(s.memo)}</textarea></div>
     <div style="margin-top:18px;display:flex;gap:8px;align-items:center">
